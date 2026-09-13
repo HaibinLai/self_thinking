@@ -4,7 +4,9 @@
 
 ## 在线使用
 
-访问 <https://haibinlai.github.io/self_thinking/>。
+当前已发布站点：<https://caseboard-haibin.gb38290171.chatgpt.site/>。
+
+GitHub Pages 地址：<https://haibinlai.github.io/self_thinking/>（需在仓库设置中启用 GitHub Actions 发布源并完成部署）。
 
 GitHub Pages 通过 `.github/workflows/pages.yml` 发布 `dist/`。推送到 `main` 的页面或发布配置改动会自动更新网站，也可在仓库 Actions 页面手动运行部署。
 
@@ -23,7 +25,9 @@ python3 -m http.server 8000 --bind 127.0.0.1 --directory dist
 ## 功能
 
 - 创建、编辑、删除线索卡片，选择线索类型。
-- 拖动卡片、在卡片之间建立连线、缩放推理板。
+- 拖动卡片、在卡片之间建立连线；卡片位置不再受固定画布边界限制。
+- 拖动空白区域平移画布，围绕视口中心缩放（35%–180%）。
+- 新卡片出现在当前视口中心，画布位置与缩放比例随数据保存。
 - 调整板面与连线颜色。
 - 使用浏览器 `localStorage` 保存数据（键名 `caseboard-v1`）。数据属于当前浏览器和站点地址，不会自动同步到其他设备；清除站点数据会删除记录。
 
@@ -36,7 +40,9 @@ README.md      # 运行和代码说明
 .gitignore     # 本地文件排除规则
 ```
 
-代码来自 `Caseboard-source.zip`。压缩包仅包含 `dist/index.html` 和 `.openai/hosting.json`，没有独立的 `src/`、依赖清单或构建配置。尽管目录名为 `dist`，该 HTML 是附件中全部可运行代码，本次按原始字节保留。
+初始代码来自 `Caseboard-source.zip`（站点 v2）。压缩包仅包含 `dist/index.html` 和 `.openai/hosting.json`，没有独立的 `src/`、依赖清单或构建配置。尽管目录名为 `dist`，该 HTML 包含完整应用。
+
+2026-09-13 同步到已发布站点 v3；Sites 记录的源提交为 `c622d1a7880e6f3dcb9c6914380ecaf80cd968ed`。本次从公开站点响应提取应用 HTML，移除了托管层注入的 Cloudflare challenge 脚本；并非直接导出该源提交的归档。
 
 `.openai/hosting.json` 绑定原托管平台的项目，未导入本仓库。页面不依赖该配置，也没有外部脚本、后端或数据库。
 
@@ -48,4 +54,4 @@ JavaScript 以 `state` 管理卡片、连线与颜色；`render` 渲染卡片，
 - 窄屏编辑面板没有显式关闭按钮；拖动和卡片选择缺少完善的触屏及键盘支持。
 - 连线没有独立删除入口，也没有数据导入、导出或跨设备同步功能。
 
-本次仅导入原始应用并补充文档，未修改其交互逻辑。
+本次同步保留站点 v3 的交互逻辑，以上限制仍然存在。
