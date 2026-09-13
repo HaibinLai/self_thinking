@@ -1,0 +1,9 @@
+.DS_Store
+__MACOSX/
+.openai/
+node_modules/
+*.log
+.env
+.env.*
+!.env.example
+__pycache__/
