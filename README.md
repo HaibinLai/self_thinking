@@ -2,6 +2,14 @@
 
 把线索、证据和推断放到同一张推理板上的中文静态网页应用。
 
+## 在线使用
+
+访问 <https://haibinlai.github.io/self_thinking/>。
+
+GitHub Pages 通过 `.github/workflows/pages.yml` 发布 `dist/`。推送到 `main` 的页面或发布配置改动会自动更新网站，也可在仓库 Actions 页面手动运行部署。
+
+线上网站与本地预览使用不同的浏览器存储空间，本地已有卡片不会自动迁移到线上。
+
 ## 运行
 
 无需安装依赖或构建。在仓库根目录运行：
