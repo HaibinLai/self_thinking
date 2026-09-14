@@ -159,7 +159,15 @@
     document.querySelector('#linkDone').onclick=()=>{clearLinkSelection();setPanel('right',false)};
     document.querySelector('#linkDel').onclick=()=>{state.links.splice(selectedLink,1);selectedLink=null;drawLinks();save();inspectorContent.innerHTML=EMPTY_INSPECTOR;setPanel('right',false);toastMsg('连线已删除。')};
   }
-  function startPan(e){if(e.target.closest('.card')||e.target.classList?.contains('link-hit'))return;if(selectedLink!=null){selectedLink=null;drawLinks();if(!selected)inspectorContent.innerHTML=EMPTY_INSPECTOR}pan={x:e.clientX,y:e.clientY,cx:camera.x,cy:camera.y,moved:false};boardWrap.classList.add('panning');window.addEventListener('pointermove',movePan);window.addEventListener('pointerup',endPan,{once:true})}
+  function clearSelection(){
+    const had=selected!=null||selectedLink!=null||linking;
+    if(selected)saveDraft();
+    selected=null;selectedLink=null;linking=null;
+    markCards();drawLinks();
+    inspectorContent.innerHTML=EMPTY_INSPECTOR;
+    return had;
+  }
+  function startPan(e){if(e.target.closest('.card')||e.target.classList?.contains('link-hit'))return;clearSelection();pan={x:e.clientX,y:e.clientY,cx:camera.x,cy:camera.y,moved:false};boardWrap.classList.add('panning');window.addEventListener('pointermove',movePan);window.addEventListener('pointerup',endPan,{once:true})}
   function movePan(e){if(!pan)return;pan.moved=true;camera.x=pan.cx+e.clientX-pan.x;camera.y=pan.cy+e.clientY-pan.y;applyStyle()}
   function endPan(){window.removeEventListener('pointermove',movePan);boardWrap.classList.remove('panning');if(pan){save();setTimeout(()=>pan=null,0)}}
   function setZoom(next,anchor){
