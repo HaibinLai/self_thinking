@@ -35,7 +35,7 @@ python3 -m http.server 8000 --bind 127.0.0.1 --directory dist
 node --test tests/board-store.test.cjs
 ```
 
-改动 `board-store.js` 的存储 / 迁移逻辑后，务必跑一次 `node --test`。改动 UI 后，建议在浏览器里手动验证：拖动卡片、平移、滚轮缩放、粘贴建板、连线、连线详情面板（改标志 / 粗细 / 删除 / 调换方向）。
+改动 `board-store.js` 的存储 / 迁移逻辑后，务必跑一次 `node --test`。改动 UI 后，建议在浏览器里手动验证：拖动卡片、平移、滚轮缩放、粘贴建板、粘贴网址建链接剪报、连线（默认无标志）、连线详情面板（改标志 / 粗细 / 删除 / 调换方向）。
 
 ## 关键数据模型
 
@@ -64,11 +64,12 @@ node --test tests/board-store.test.cjs
 ```
 
 - **卡片 `cardScale`（思想尺度）**：`世界问题` / `研究判断` / `机制 / 局部问题` / `观察 / 证据`，映射到 CSS 类 `world` / `research` / `mechanism` / `evidence`，决定卡片尺寸与底色。缩放 < 55% 时进入 `far` 模式，卡片显示为圆点。
+- **链接剪报**：`kind: '链接'` 或存在 `url` 时使用 CSS 类 `link`。字段：`url`（http/https）、可选 `preview`（自备封面图）、`note`（批注）。卡片面由 `cardFaceHtml` 渲染：优先 `preview`，否则 `thum.io` 页面缩略图，失败回退 Google favicon。粘贴单个网址或点「＋ 链接」调用 `addLinkCard`。
 - **连线 `links`**：每条是对象 `{from, to, marker, width, color}`。
-  - `marker`：`arrow`（箭头）/ `dot`（圆点）/ `diamond`（菱形）/ `bar`（短杠）/ `none`（无）。
+  - `marker`：`none`（默认新建）/ `arrow` / `dot` / `diamond` / `bar`。
   - `width`：该条连线粗细（px）；缺省回退 `state.lineWidth`。
   - `color`：该条连线颜色；缺省回退 `state.lineColor`。预设见 `LINK_COLORS`（红/金/蓝/紫/绿/橙/米/灰）。
-  - **向后兼容**：旧数据里连线是 `['fromId','toId']` 数组。`normalizeLinks(state)` 会在加载和切板时把数组升级为 `{from,to,marker:'arrow'}` 对象。新增或修改连线时永远使用对象形式。
+  - **向后兼容**：旧数据里连线是 `['fromId','toId']` 数组。`normalizeLinks(state)` 会在加载和切板时把数组升级为 `{from,to,marker:'arrow'}` 对象。新增连线使用 `marker:'none'`。
 
 ## 代码地图（`dist/index.html` 内主要函数）
 
