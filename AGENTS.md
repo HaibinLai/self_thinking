@@ -74,8 +74,9 @@ node --test tests/board-store.test.cjs
 - `CaseboardStore.load / save`（在 `board-store.js`）：读写 workspace，做版本校验与旧数据迁移。
 - `normalizeLinks(state)`：把连线数组升级为对象。
 - `render()`：重建所有卡片 DOM，然后 `drawLinks()` + `markCards()` + `applyStyle()` + `save()`。
-- `drawLinks()`：重建 SVG。先用 `markerDefs(color)` 生成 `<defs>` 里的标志；每条连线渲染一条透明 `.link-hit` 命中线（用于点击）+ 一条带 `marker-end` 的可见线；被选中的连线用金色高亮。
-- `markerDefs(color)` / `MARKERS`：标志定义与下拉选项来源。新增标志类型时，同时改这两处。
+- `drawLinks()`：重建 SVG。先用 `markerDefs(color)` 生成 `<defs>` 里的标志；每条连线用 `edgePoint` 落到卡片边缘外侧再绘制，避免标志被卡片盖住；每条连线渲染一条透明 `.link-hit` 命中线（用于点击）+ 一条带 `marker-end` 的可见线；被选中的连线用金色高亮。
+- `markerDefs(color)` / `MARKERS`：标志定义与下拉选项来源。新增标志类型时，同时改这两处。注意 `return (` 必须用括号包住模板字符串，否则换行会触发 ASI 导致返回 `undefined`。
+- `edgePoint(cx,cy,w,h,tx,ty,pad)`：从卡片中心朝目标方向落到矩形边缘外 `pad` 像素处。
 - `openInspector()`：卡片编辑面板。`openLinkInspector()` / `selectLink()` / `clearLinkSelection()`：连线编辑面板。
 - `startDrag/moveDrag/endDrag`：拖动卡片（移动 6px 才算拖动）。`startPan/movePan/endPan`：平移画布。`wheelZoom/setZoom`：以指针为中心缩放（0.35–1.8）。
 - `newBoardFromText(text)`：粘贴文字或点「＋ 板子」时新建板子。`activateBoard(id)`：切换板子（会 `normalizeLinks` 并重置选中态）。
