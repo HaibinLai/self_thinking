@@ -64,9 +64,10 @@ node --test tests/board-store.test.cjs
 ```
 
 - **卡片 `cardScale`（思想尺度）**：`世界问题` / `研究判断` / `机制 / 局部问题` / `观察 / 证据`，映射到 CSS 类 `world` / `research` / `mechanism` / `evidence`，决定卡片尺寸与底色。缩放 < 55% 时进入 `far` 模式，卡片显示为圆点。
-- **连线 `links`**：每条是对象 `{from, to, marker, width}`。
+- **连线 `links`**：每条是对象 `{from, to, marker, width, color}`。
   - `marker`：`arrow`（箭头）/ `dot`（圆点）/ `diamond`（菱形）/ `bar`（短杠）/ `none`（无）。
   - `width`：该条连线粗细（px）；缺省回退 `state.lineWidth`。
+  - `color`：该条连线颜色；缺省回退 `state.lineColor`。预设见 `LINK_COLORS`（红/金/蓝/紫/绿/橙/米/灰）。
   - **向后兼容**：旧数据里连线是 `['fromId','toId']` 数组。`normalizeLinks(state)` 会在加载和切板时把数组升级为 `{from,to,marker:'arrow'}` 对象。新增或修改连线时永远使用对象形式。
 
 ## 代码地图（`dist/index.html` 内主要函数）

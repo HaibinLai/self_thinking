@@ -27,14 +27,15 @@
     .strings line.link-hit:hover+line,.strings line.sel{filter:drop-shadow(0 0 3px var(--gold))}
     .style-row input[type=range]{width:120px;height:20px}
     .range-row{align-items:center}.range-row output{color:#cad0da;font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
+    .swatches{display:flex;flex-wrap:wrap;gap:7px}.swatch{width:22px;height:22px;border-radius:50%;border:2px solid #2b3545;cursor:pointer;padding:0;background:var(--c)}.swatch.on{border-color:#fff;box-shadow:0 0 0 2px var(--gold)}.inspector .swatch{border-color:#ccd3dd}.inspector .swatch.on{border-color:#202630;box-shadow:0 0 0 2px var(--gold)}
     @media(max-width:600px){.board-select{max-width:150px}}
   </style>
 </head>
 <body>
   <main class="app">
-    <aside class="side" id="sidebar"><button class="btn panel-close" id="closeSidebar" aria-label="收起案件侧栏">收起 ‹</button><div class="brand"><span class="brand-mark">⌕</span> Caseboard</div><div class="case-name"><small>当前案件</small><strong id="caseTitle">关于“AI 与人的位置”</strong></div><section><p class="section-title">线索类型</p><div class="legend"><div><i class="dot lead"></i>线索</div><div><i class="dot source"></i>来源</div><div><i class="dot idea"></i>推断</div><div><i class="dot question"></i>待问问题</div></div></section><section><p class="section-title">案件风格</p><label class="style-row">板面颜色 <input type="color" id="boardColor" value="#1b2738"></label><label class="style-row">连线颜色 <input type="color" id="lineColor" value="#d95650"></label><label class="style-row range-row">连线粗细 <span style="display:flex;align-items:center;gap:6px"><input type="range" id="lineWidth" min="1" max="10" value="2"><output id="lineWidthVal">2</output></span></label></section><div class="side-foot">画布上按 ⌘V / Ctrl+V，将文字放进新板子。<br>所有板子保存在这台设备上。<br>你不是在收集答案，而是在留下推理的轨迹。</div></aside>
+    <aside class="side" id="sidebar"><button class="btn panel-close" id="closeSidebar" aria-label="收起案件侧栏">收起 ‹</button><div class="brand"><span class="brand-mark">⌕</span> Caseboard</div><div class="case-name"><small>当前案件</small><strong id="caseTitle">关于“AI 与人的位置”</strong></div><section><p class="section-title">线索类型</p><div class="legend"><div><i class="dot lead"></i>线索</div><div><i class="dot source"></i>来源</div><div><i class="dot idea"></i>推断</div><div><i class="dot question"></i>待问问题</div></div></section><section><p class="section-title">案件风格</p><label class="style-row">板面颜色 <input type="color" id="boardColor" value="#1b2738"></label><label class="style-row">连线颜色</label><div class="swatches" id="lineColorSwatches" role="group" aria-label="连线默认颜色"></div><label class="style-row range-row">连线粗细 <span style="display:flex;align-items:center;gap:6px"><input type="range" id="lineWidth" min="1" max="10" value="2"><output id="lineWidthVal">2</output></span></label></section><div class="side-foot">画布上按 ⌘V / Ctrl+V，将文字放进新板子。<br>所有板子保存在这台设备上。<br>你不是在收集答案，而是在留下推理的轨迹。</div></aside>
     <section class="workspace"><header class="toolbar"><button class="btn" id="toggleSidebar" aria-controls="sidebar" aria-expanded="true">案件</button><h1>推理板 <span id="count"></span></h1><select class="btn board-select" id="boardSelect" aria-label="切换板子"></select><button class="btn" id="newBoard">＋ 板子</button><button class="btn" id="zoomOut" aria-label="缩小">－</button><span class="zoom" id="zoomLabel">100%</span><button class="btn" id="zoomIn" aria-label="放大">＋</button><button class="btn" id="linkBtn">连线</button><button class="btn primary" id="addBtn">＋ 新线索</button><button class="btn" id="toggleInspector" aria-controls="inspector" aria-expanded="true">详情</button></header><div class="board-wrap" tabindex="0" aria-label="推理画布，粘贴文字可新建板子"><div class="stage" id="stage"><div class="board" id="board"><svg class="strings" id="strings"></svg><div class="empty" id="empty" hidden>在画布上按 ⌘V / Ctrl+V<br>把文字粘贴到新板子。</div></div></div></div></section>
-    <aside class="inspector" id="inspector"><button class="btn panel-close" id="closeInspector" aria-label="收起详情侧栏">收起 ›</button><div id="inspectorContent"><h2>放大一张卡片</h2><p class="empty-note">点一下线索卡，就可以记录它的来源、疑问和关系；点一下连线，可以修改标志、粗细或删除它。</p></div></aside>
+    <aside class="inspector" id="inspector"><button class="btn panel-close" id="closeInspector" aria-label="收起详情侧栏">收起 ›</button><div id="inspectorContent"><h2>放大一张卡片</h2><p class="empty-note">点一下线索卡，就可以记录它的来源、疑问和关系；点一下连线，可以修改颜色、标志、粗细或删除它。</p></div></aside>
   </main><div class="toast" id="toast" role="status"></div><div id="storageError" role="alert" hidden></div>
   <script src="board-store.js"></script>
   <script>
@@ -76,6 +77,10 @@
   const cardDimensions={world:[286,154],research:[228,123],mechanism:[185,104],evidence:[142,76]};
   const esc=s=>String(s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const MARKERS=[['arrow','箭头'],['dot','圆点'],['diamond','菱形'],['bar','短杠'],['none','无']];
+  const LINK_COLORS=[
+    ['#d95650','红'],['#e5b55c','金'],['#77b7d5','蓝'],['#c68bf1','紫'],
+    ['#5ecf8e','绿'],['#ff8a5b','橙'],['#f0e6d2','米'],['#8e98a9','灰']
+  ];
   function normalizeLinks(s){if(!Array.isArray(s.links))s.links=[];s.links=s.links.map(l=>Array.isArray(l)?{from:l[0],to:l[1],marker:'arrow'}:l)}
   function markerDefs(color,prefix='mk'){return (
     `<marker id="${prefix}-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="${color}"/></marker>`+
@@ -83,6 +88,13 @@
     `<marker id="${prefix}-diamond" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto"><path d="M5,0L10,5L5,10L0,5z" fill="${color}"/></marker>`+
     `<marker id="${prefix}-bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto"><rect x="3.5" y="0" width="3" height="10" fill="${color}"/></marker>`
   )}
+  function colorKey(c){return String(c||'').replace('#','').toLowerCase()}
+  function swatchHtml(active,name){
+    return LINK_COLORS.map(([c,label])=>`<button type="button" class="swatch${colorKey(c)===colorKey(active)?' on':''}" data-color="${c}" data-swatch="${name}" style="--c:${c}" title="${label}" aria-label="${label}" aria-pressed="${colorKey(c)===colorKey(active)}"></button>`).join('')
+  }
+  function bindSwatches(root,get,set){
+    root.querySelectorAll('.swatch').forEach(btn=>btn.onclick=()=>{set(btn.dataset.color);root.querySelectorAll('.swatch').forEach(b=>{const on=b.dataset.color===btn.dataset.color;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on))})})
+  }
   // 从卡片中心朝目标方向，落到矩形边缘外 pad 像素处，避免标志被卡片盖住
   function edgePoint(cx,cy,w,h,tx,ty,pad){
     const dx=tx-cx,dy=ty-cy;if(!dx&&!dy)return {x:cx,y:cy};
@@ -92,12 +104,18 @@
     return {x,y};
   }
   function save(){state.panels={left:leftOpen,right:rightOpen};state.camera={x:camera.x,y:camera.y,scale};try{CaseboardStore.save(localStorage,workspace);document.querySelector('#storageError').hidden=true}catch(error){document.querySelector('#storageError').hidden=false;document.querySelector('#storageError').textContent='本地保存失败，可能是存储空间已满。请保留当前页面，勿刷新或关闭。'}document.querySelector('#caseTitle').textContent=state.caseTitle;document.querySelector('#count').textContent=`${state.cards.length} 张卡片`}
-  function applyStyle(){boardWrap.style.backgroundColor=state.boardColor;boardWrap.style.backgroundPosition=`${camera.x}px ${camera.y}px`;document.querySelector('#boardColor').value=state.boardColor;document.querySelector('#lineColor').value=state.lineColor;document.querySelector('#lineWidth').value=state.lineWidth;document.querySelector('#lineWidthVal').textContent=state.lineWidth;stage.style.transform=`translate(${camera.x}px,${camera.y}px) scale(${scale})`;const wasFar=stage.classList.contains('far');stage.classList.toggle('far',scale<.55);if(wasFar!==(scale<.55))drawLinks();document.querySelector('#zoomLabel').textContent=Math.round(scale*100)+'%'}
+  function applyStyle(){boardWrap.style.backgroundColor=state.boardColor;boardWrap.style.backgroundPosition=`${camera.x}px ${camera.y}px`;document.querySelector('#boardColor').value=state.boardColor;document.querySelector('#lineWidth').value=state.lineWidth;document.querySelector('#lineWidthVal').textContent=state.lineWidth;stage.style.transform=`translate(${camera.x}px,${camera.y}px) scale(${scale})`;const wasFar=stage.classList.contains('far');stage.classList.toggle('far',scale<.55);if(wasFar!==(scale<.55))drawLinks();document.querySelector('#zoomLabel').textContent=Math.round(scale*100)+'%'}
+  function refreshLineColorSwatches(){
+    const box=document.querySelector('#lineColorSwatches');if(!box)return;
+    box.innerHTML=swatchHtml(state.lineColor,'default');
+    bindSwatches(box,()=>state.lineColor,c=>{state.lineColor=c;drawLinks();save()});
+  }
   function markCards(){document.querySelectorAll('.card').forEach(e=>{e.classList.toggle('selected',e.dataset.id===selected);e.classList.toggle('target',e.dataset.id===linking)});boardWrap.classList.toggle('linking',!!linking);document.querySelector('#linkBtn').classList.toggle('active',!!linking)}
-  function render(){board.querySelectorAll('.card').forEach(e=>e.remove());document.querySelector('#empty').hidden=state.cards.length>0;state.cards.forEach(c=>{let e=document.createElement('article');e.className=`card ${scaleClass[c.cardScale]||'mechanism'}`;e.dataset.id=c.id;e.style.cssText=`left:${c.x}px;top:${c.y}px;--tilt:${c.tilt||'0deg'};--type:${typeColor[c.kind]||'#e5b55c'}`;e.innerHTML=`<button class="pin" aria-label="从这张卡片连线" title="从这里连线">↗</button><div class="kind">${esc(c.cardScale)} · ${esc(c.kind)}</div><div class="title">${esc(c.title||'无标题')}</div><div class="excerpt">${esc(c.note||'')}</div>`;e.addEventListener('pointerdown',startDrag);e.addEventListener('click',clickCard);let pin=e.querySelector('.pin');pin.addEventListener('pointerdown',x=>x.stopPropagation());pin.addEventListener('click',x=>{x.stopPropagation();enterLinkMode(c.id)});board.appendChild(e)});drawLinks();markCards();applyStyle();save()}
+  function render(){board.querySelectorAll('.card').forEach(e=>e.remove());document.querySelector('#empty').hidden=state.cards.length>0;state.cards.forEach(c=>{let e=document.createElement('article');e.className=`card ${scaleClass[c.cardScale]||'mechanism'}`;e.dataset.id=c.id;e.style.cssText=`left:${c.x}px;top:${c.y}px;--tilt:${c.tilt||'0deg'};--type:${typeColor[c.kind]||'#e5b55c'}`;e.innerHTML=`<button class="pin" aria-label="从这张卡片连线" title="从这里连线">↗</button><div class="kind">${esc(c.cardScale)} · ${esc(c.kind)}</div><div class="title">${esc(c.title||'无标题')}</div><div class="excerpt">${esc(c.note||'')}</div>`;e.addEventListener('pointerdown',startDrag);e.addEventListener('click',clickCard);let pin=e.querySelector('.pin');pin.addEventListener('pointerdown',x=>x.stopPropagation());pin.addEventListener('click',x=>{x.stopPropagation();enterLinkMode(c.id)});board.appendChild(e)});drawLinks();markCards();applyStyle();refreshLineColorSwatches();save()}
   function drawLinks(){
     const sizes=new Map([...board.querySelectorAll('.card')].map(e=>[e.dataset.id,[e.offsetWidth,e.offsetHeight]]));
-    let out=`<defs>${markerDefs(state.lineColor,'mk')}${markerDefs('#e5b55c','mks')}</defs>`;
+    const used=new Set([state.lineColor,...state.links.map(lk=>lk.color||state.lineColor)]);
+    let out='<defs>'+[...used].map(c=>markerDefs(c,'mk'+colorKey(c))).join('')+'</defs>';
     state.links.forEach((lk,i)=>{
       const A=state.cards.find(c=>c.id===lk.from),B=state.cards.find(c=>c.id===lk.to);if(!A||!B)return;
       const [aw,ah]=sizes.get(lk.from)||cardDimensions[scaleClass[A.cardScale]||'mechanism'];
@@ -105,8 +123,8 @@
       const acx=A.x+aw/2,acy=A.y+ah/2,bcx=B.x+bw/2,bcy=B.y+bh/2;
       const pad=lk.marker&&lk.marker!=='none'?10:4;
       const p1=edgePoint(acx,acy,aw,ah,bcx,bcy,4),p2=edgePoint(bcx,bcy,bw,bh,acx,acy,pad);
-      const w=lk.width||state.lineWidth||2,sel=i===selectedLink,stroke=sel?'#e5b55c':state.lineColor;
-      const prefix=sel?'mks':'mk';
+      const w=lk.width||state.lineWidth||2,sel=i===selectedLink,stroke=lk.color||state.lineColor;
+      const prefix='mk'+colorKey(stroke);
       const mk=(lk.marker&&lk.marker!=='none')?` marker-end="url(#${prefix}-${lk.marker})"`:'';
       out+=`<line class="link-hit" data-i="${i}" x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke-width="${Math.max(16,w+12)}"/>`;
       out+=`<line class="${sel?'sel':''}" x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="${stroke}" stroke-width="${w}" opacity="${sel?1:.9}"${mk}/>`;
@@ -119,20 +137,22 @@
   function endDrag(){window.removeEventListener('pointermove',moveDrag);if(drag?.moved)save();if(drag)setTimeout(()=>drag=null,0)}
   function enterLinkMode(id){linking=id||'choose-source';markCards();toastMsg(id?'现在点另一张卡片，红线会自动钉上。':'先点起点，再点终点。')}
   function clearLinkMode(){linking=null;markCards()}
-  function clickCard(e){if(drag?.moved)return;if(selectedLink!=null){selectedLink=null;drawLinks()}let id=e.currentTarget.dataset.id;if(linking==='choose-source'){selected=id;linking=id;markCards();openInspector();toastMsg('已选起点；再点一张卡片即可连线。');return}if(linking&&linking!==id){if(!state.links.some(x=>x.from===linking&&x.to===id))state.links.push({from:linking,to:id,marker:'arrow',width:state.lineWidth});selected=id;clearLinkMode();drawLinks();save();openInspector();toastMsg('红线已钉上。');return}selected=id;markCards();openInspector()}
+  function clickCard(e){if(drag?.moved)return;if(selectedLink!=null){selectedLink=null;drawLinks()}let id=e.currentTarget.dataset.id;if(linking==='choose-source'){selected=id;linking=id;markCards();openInspector();toastMsg('已选起点；再点一张卡片即可连线。');return}if(linking&&linking!==id){if(!state.links.some(x=>x.from===linking&&x.to===id))state.links.push({from:linking,to:id,marker:'arrow',width:state.lineWidth,color:state.lineColor});selected=id;clearLinkMode();drawLinks();save();openInspector();toastMsg('红线已钉上。');return}selected=id;markCards();openInspector()}
   function openInspector(){let c=state.cards.find(x=>x.id===selected);if(!c)return;setPanel('right',true);inspectorContent.innerHTML=`<h2>线索详情</h2>${linking?'<div class="connection-help">连线模式已开启：点另一张卡片即可自动建立关系。</div>':''}<div class="field"><label>思想尺度</label><select id="fscale">${['世界问题','研究判断','机制 / 局部问题','观察 / 证据'].map(x=>`<option ${x===c.cardScale?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>类型</label><select id="fkind">${['线索','来源','观察','推断','问题','下一步'].map(x=>`<option ${x===c.kind?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>标题</label><input id="ftitle" value="${esc(c.title)}" /></div><div class="field"><label>记录 / 证据 / 想法</label><textarea id="fnote">${esc(c.note)}</textarea></div><div class="actions"><button class="btn primary" id="saveCard">保存</button><button class="btn" id="makeLink">从这里连线</button><button class="btn" id="delCard">删除</button></div>`;document.querySelector('#saveCard').onclick=()=>{c.cardScale=document.querySelector('#fscale').value;c.kind=document.querySelector('#fkind').value;c.title=document.querySelector('#ftitle').value.trim()||'无标题';c.note=document.querySelector('#fnote').value.trim();render();openInspector();toastMsg('线索已归档。')};document.querySelector('#makeLink').onclick=()=>enterLinkMode(c.id);document.querySelector('#delCard').onclick=()=>{state.cards=state.cards.filter(x=>x.id!==c.id);state.links=state.links.filter(x=>x.from!==c.id&&x.to!==c.id);selected=null;selectedLink=null;clearLinkMode();setPanel('right',false);inspectorContent.innerHTML=EMPTY_INSPECTOR;render()}}
-  const EMPTY_INSPECTOR='<h2>放大一张卡片</h2><p class="empty-note">点一下线索卡，就可以记录它的来源、疑问和关系；点一下连线，可以修改标志、粗细或删除它。</p>';
+  const EMPTY_INSPECTOR='<h2>放大一张卡片</h2><p class="empty-note">点一下线索卡，就可以记录它的来源、疑问和关系；点一下连线，可以修改颜色、标志、粗细或删除它。</p>';
   function selectLink(i){if(i<0||i>=state.links.length)return;selectedLink=i;selected=null;markCards();drawLinks();openLinkInspector()}
   function clearLinkSelection(){selectedLink=null;drawLinks();if(!selected){inspectorContent.innerHTML=EMPTY_INSPECTOR}}
   function openLinkInspector(){
     const lk=state.links[selectedLink];if(!lk)return;setPanel('right',true);
     const from=state.cards.find(c=>c.id===lk.from),to=state.cards.find(c=>c.id===lk.to);
-    const w=lk.width||state.lineWidth||2;
+    const w=lk.width||state.lineWidth||2,col=lk.color||state.lineColor;
     inspectorContent.innerHTML=`<h2>连线详情</h2>`+
       `<p class="empty-note">${esc(from?.title||'?')} → ${esc(to?.title||'?')}</p>`+
+      `<div class="field"><label>颜色</label><div class="swatches" id="lcolor">${swatchHtml(col,'link')}</div></div>`+
       `<div class="field"><label>标志</label><select id="lmarker">${MARKERS.map(([v,t])=>`<option value="${v}" ${(lk.marker||'arrow')===v?'selected':''}>${t}</option>`).join('')}</select></div>`+
       `<div class="field"><label>粗细 (<span id="lwval">${w}</span> px)</label><input type="range" id="lwidth" min="1" max="10" value="${w}"></div>`+
       `<div class="actions"><button class="btn" id="linkFlip">调换方向</button><button class="btn primary" id="linkDone">完成</button><button class="btn" id="linkDel">删除连线</button></div>`;
+    bindSwatches(document.querySelector('#lcolor'),()=>lk.color||state.lineColor,c=>{lk.color=c;drawLinks();save()});
     document.querySelector('#lmarker').onchange=e=>{lk.marker=e.target.value;drawLinks();save()};
     const lw=document.querySelector('#lwidth');lw.oninput=e=>{lk.width=+e.target.value;document.querySelector('#lwval').textContent=lk.width;drawLinks();save()};
     document.querySelector('#linkFlip').onclick=()=>{[lk.from,lk.to]=[lk.to,lk.from];drawLinks();save();openLinkInspector()};
@@ -201,6 +221,6 @@
   updateBoardSelect();
   function add(){let r=boardWrap.getBoundingClientRect(),c={id:crypto.randomUUID(),cardScale:'观察 / 证据',kind:'线索',title:'新线索',note:'它让我想到什么？证据是什么？',x:(r.width/2-camera.x)/scale-71,y:(r.height/2-camera.y)/scale-38,tilt:'0deg'};state.cards.push(c);selected=c.id;render();openInspector();document.querySelector('#ftitle').focus();document.querySelector('#ftitle').select()}
   function toastMsg(m){toast.textContent=m;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
-  document.querySelector('#addBtn').onclick=add;document.querySelector('#linkBtn').onclick=()=>{if(linking){clearLinkMode();toastMsg('已退出连线模式。');return}enterLinkMode(selected)};document.querySelector('#zoomIn').onclick=()=>setZoom(Math.min(1.8,+(scale+.1).toFixed(2)));document.querySelector('#zoomOut').onclick=()=>setZoom(Math.max(.35,+(scale-.1).toFixed(2)));document.querySelector('#boardColor').oninput=e=>{state.boardColor=e.target.value;applyStyle();save()};document.querySelector('#lineColor').oninput=e=>{state.lineColor=e.target.value;drawLinks();save()};document.querySelector('#lineWidth').oninput=e=>{state.lineWidth=+e.target.value;document.querySelector('#lineWidthVal').textContent=state.lineWidth;drawLinks();save()};boardWrap.addEventListener('pointerdown',startPan);render();
+  document.querySelector('#addBtn').onclick=add;document.querySelector('#linkBtn').onclick=()=>{if(linking){clearLinkMode();toastMsg('已退出连线模式。');return}enterLinkMode(selected)};document.querySelector('#zoomIn').onclick=()=>setZoom(Math.min(1.8,+(scale+.1).toFixed(2)));document.querySelector('#zoomOut').onclick=()=>setZoom(Math.max(.35,+(scale-.1).toFixed(2)));document.querySelector('#boardColor').oninput=e=>{state.boardColor=e.target.value;applyStyle();save()};document.querySelector('#lineWidth').oninput=e=>{state.lineWidth=+e.target.value;document.querySelector('#lineWidthVal').textContent=state.lineWidth;drawLinks();save()};boardWrap.addEventListener('pointerdown',startPan);render();
   </script>
 </body></html>
