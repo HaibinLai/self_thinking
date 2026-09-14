@@ -22,6 +22,8 @@ python3 -m http.server 8000 --bind 127.0.0.1 --directory dist
 
 然后打开 <http://localhost:8000>。也可以将 `dist/` 作为静态网站目录托管。
 
+站点图标为 `dist/favicon.svg`（软木板上的红图钉）。
+
 ## 复制文字到新板子
 
 1. 在任意应用复制一段文字。

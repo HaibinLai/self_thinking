@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Caseboard">
+  <!-- Corkboard tile -->
+  <rect width="32" height="32" rx="6" fill="#5c3d28"/>
+  <rect x="1.5" y="1.5" width="29" height="29" rx="4.5" fill="#6a4a32"/>
+  <!-- Subtle cork grain -->
+  <circle cx="7" cy="8" r="1.1" fill="#4a3220" opacity=".45"/>
+  <circle cx="24" cy="11" r="0.9" fill="#3a2416" opacity=".4"/>
+  <circle cx="11" cy="22" r="1" fill="#7a5a3c" opacity=".5"/>
+  <circle cx="26" cy="24" r="0.8" fill="#4a3220" opacity=".35"/>
+  <circle cx="18" cy="6" r="0.7" fill="#8a6a48" opacity=".35"/>
+  <!-- Paper note -->
+  <g transform="rotate(-8 16 18)">
+    <rect x="8" y="12" width="16" height="14" rx="1" fill="#f3e6c4"/>
+    <rect x="8" y="12" width="16" height="14" rx="1" fill="none" stroke="#c4a86a" stroke-width=".6" opacity=".7"/>
+    <line x1="11" y1="17" x2="21" y2="17" stroke="#b89a6a" stroke-width="1" stroke-linecap="round" opacity=".55"/>
+    <line x1="11" y1="20.5" x2="19" y2="20.5" stroke="#b89a6a" stroke-width="1" stroke-linecap="round" opacity=".4"/>
+  </g>
+  <!-- Red pushpin -->
+  <circle cx="16" cy="11.5" r="4.2" fill="#e5534b"/>
+  <circle cx="14.6" cy="10.2" r="1.5" fill="#ffb0a8" opacity=".85"/>
+  <circle cx="16" cy="11.5" r="1.4" fill="#8e2525"/>
+  <!-- Pin needle hint -->
+  <path d="M16 15.5 L16.4 19.2 L15.6 19.2 Z" fill="#c9b896" opacity=".7"/>
+</svg>
