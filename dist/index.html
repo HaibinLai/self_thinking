@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <title>Caseboard — 推理工作台</title>
   <meta name="description" content="把线索、证据和推断放到同一张推理板上。" />
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=settings2">
 </head>
 <body>
   <main class="app">
@@ -18,7 +18,9 @@
       <button class="btn panel-close" id="closeSidebar" aria-label="收起案件侧栏">收起 ‹</button>
       <div class="brand-row">
         <div class="brand"><span class="brand-mark">⌕</span> Caseboard</div>
-        <button class="btn gear-btn" id="openSettings" aria-haspopup="dialog" aria-controls="settingsPanel" aria-expanded="false" title="系统设置" aria-label="打开系统设置">⚙</button>
+        <button type="button" class="btn gear-btn" id="openSettings" aria-haspopup="dialog" aria-controls="settingsPanel" aria-expanded="false" title="系统设置" aria-label="打开系统设置">
+          <svg class="gear-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.2 7.2 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.55-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.49.49 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.86 14.52a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.3.59.22l2.39-.96c.5.39 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.55 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
+        </button>
       </div>
       <div class="case-name">
         <small>当前案件</small>
@@ -44,6 +46,9 @@
     <section class="workspace">
       <header class="toolbar">
         <button class="btn" id="toggleSidebar" aria-controls="sidebar" aria-expanded="true">案件</button>
+        <button type="button" class="btn gear-btn toolbar-gear" id="openSettingsToolbar" aria-haspopup="dialog" aria-controls="settingsPanel" aria-expanded="false" title="系统设置" aria-label="打开系统设置">
+          <svg class="gear-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.2 7.2 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.55-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.49.49 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.86 14.52a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.3.59.22l2.39-.96c.5.39 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.55 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
+        </button>
         <h1>推理板 <span id="count"></span></h1>
         <select class="btn board-select" id="boardSelect" aria-label="切换板子"></select>
         <button class="btn" id="newBoard">＋ 板子</button>
@@ -77,12 +82,12 @@
   <div class="toast" id="toast" role="status"></div>
   <div id="storageError" role="alert" hidden></div>
 
-  <div class="settings-root" id="settingsRoot" hidden>
+  <div class="settings-root" id="settingsRoot" hidden aria-hidden="true">
     <div class="settings-backdrop" id="settingsBackdrop"></div>
     <div class="settings-panel" id="settingsPanel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" tabindex="-1">
       <header class="settings-head">
         <h2 id="settingsTitle">系统设置</h2>
-        <button class="btn" id="closeSettings" aria-label="关闭设置">关闭</button>
+        <button type="button" class="btn" id="closeSettings" aria-label="关闭设置">关闭</button>
       </header>
       <p class="settings-note">这些是 Caseboard 的全局外观配置，对所有板子生效。</p>
       <label class="style-row">字体
@@ -105,7 +110,7 @@
     </div>
   </div>
 
-  <script src="board-store.js"></script>
-  <script src="app.js"></script>
+  <script src="board-store.js?v=settings2"></script>
+  <script src="app.js?v=settings2"></script>
 </body>
 </html>

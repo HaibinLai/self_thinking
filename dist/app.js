@@ -40,6 +40,44 @@ document.querySelector('#closeSidebar').onclick=()=>{setPanel('left',false);docu
 document.querySelector('#closeInspector').onclick=()=>{setPanel('right',false);document.querySelector('#toggleInspector').focus()};
 narrowScreen.addEventListener('change',()=>{if(narrowScreen.matches){leftOpen=false;rightOpen=false}else{leftOpen=state.panels?.left!==false;rightOpen=state.panels?.right!==false}updatePanels()});
 updatePanels();
+const settingsRoot=document.querySelector('#settingsRoot');
+const settingsPanel=document.querySelector('#settingsPanel');
+const settingsBackdrop=document.querySelector('#settingsBackdrop');
+const openSettingsBtns=[...document.querySelectorAll('#openSettings,#openSettingsToolbar')];
+const closeSettingsBtn=document.querySelector('#closeSettings');
+let settingsOpenedAt=0;
+function isSettingsOpen(){return !!(settingsRoot&&!settingsRoot.hidden&&settingsRoot.classList.contains('is-open'))}
+function syncSettingsTriggers(open){openSettingsBtns.forEach(btn=>{if(btn)btn.setAttribute('aria-expanded',String(open))})}
+function openSettings(ev){
+  if(ev){ev.preventDefault();ev.stopPropagation()}
+  if(!settingsRoot)return;
+  settingsOpenedAt=Date.now();
+  settingsRoot.hidden=false;
+  settingsRoot.classList.add('is-open');
+  settingsRoot.setAttribute('aria-hidden','false');
+  syncSettingsTriggers(true);
+  try{refreshLineColorSwatches();applyStyle();applyFont()}catch(_){}
+  queueMicrotask(()=>{try{settingsPanel&&settingsPanel.focus({preventScroll:true})}catch(_){}});
+}
+function closeSettings(ev){
+  if(ev){ev.preventDefault();ev.stopPropagation()}
+  if(!isSettingsOpen())return;
+  settingsRoot.classList.remove('is-open');
+  settingsRoot.hidden=true;
+  settingsRoot.setAttribute('aria-hidden','true');
+  syncSettingsTriggers(false);
+  const focusBtn=openSettingsBtns.find(btn=>btn&&btn.getClientRects().length)||openSettingsBtns[0];
+  try{focusBtn&&focusBtn.focus({preventScroll:true})}catch(_){}
+}
+function toggleSettings(ev){if(isSettingsOpen())closeSettings(ev);else openSettings(ev)}
+openSettingsBtns.forEach(btn=>btn&&btn.addEventListener('click',toggleSettings));
+if(closeSettingsBtn)closeSettingsBtn.addEventListener('click',closeSettings);
+if(settingsBackdrop)settingsBackdrop.addEventListener('click',e=>{
+  if(Date.now()-settingsOpenedAt<350){e.preventDefault();e.stopPropagation();return}
+  closeSettings(e);
+});
+if(settingsPanel)settingsPanel.addEventListener('click',e=>e.stopPropagation());
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&isSettingsOpen()){e.preventDefault();closeSettings(e)}});
 const typeColor={线索:'#e5b55c',来源:'#77b7d5',观察:'#77b7d5',推断:'#c68bf1',问题:'#ff7168',下一步:'#ff7168',链接:'#5a9f78'};
 const scaleClass={'世界问题':'world','研究判断':'research','机制 / 局部问题':'mechanism','观察 / 证据':'evidence'};
 window.addEventListener('resize',()=>drawLinks());
@@ -336,26 +374,6 @@ function addLinkCard(url=''){
 }
 function add(){let r=boardWrap.getBoundingClientRect(),c={id:crypto.randomUUID(),cardScale:'观察 / 证据',kind:'线索',title:'新线索',note:'它让我想到什么？证据是什么？',x:(r.width/2-camera.x)/scale-71,y:(r.height/2-camera.y)/scale-38,tilt:'0deg'};state.cards.push(c);selected=c.id;render();openInspector();document.querySelector('#ftitle').focus();document.querySelector('#ftitle').select()}
 function toastMsg(m){toast.textContent=m;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
-const settingsRoot=document.querySelector('#settingsRoot');
-const openSettingsBtn=document.querySelector('#openSettings');
-const closeSettingsBtn=document.querySelector('#closeSettings');
-function openSettings(){
-  settingsRoot.hidden=false;
-  openSettingsBtn.setAttribute('aria-expanded','true');
-  document.querySelector('#settingsPanel').focus({preventScroll:true});
-  refreshLineColorSwatches();
-  applyStyle();applyFont();
-}
-function closeSettings(){
-  if(settingsRoot.hidden)return;
-  settingsRoot.hidden=true;
-  openSettingsBtn.setAttribute('aria-expanded','false');
-  openSettingsBtn.focus({preventScroll:true});
-}
-openSettingsBtn.onclick=()=>{settingsRoot.hidden?openSettings():closeSettings()};
-closeSettingsBtn.onclick=closeSettings;
-document.querySelector('#settingsBackdrop').onclick=closeSettings;
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!settingsRoot.hidden){e.preventDefault();closeSettings()}});
 document.querySelector('#addLinkBtn').onclick=()=>addLinkCard();
 document.querySelector('#addBtn').onclick=add;document.querySelector('#linkBtn').onclick=()=>{if(linking){clearLinkMode();toastMsg('已退出连线模式。');return}enterLinkMode(selected)};document.querySelector('#zoomIn').onclick=()=>setZoom(Math.min(1.8,+(scale+.1).toFixed(2)));document.querySelector('#zoomOut').onclick=()=>setZoom(Math.max(.35,+(scale-.1).toFixed(2)));document.querySelector('#boardColor').oninput=e=>{state.boardColor=e.target.value;applyStyle();save()};document.querySelector('#lineWidth').oninput=e=>{state.lineWidth=+e.target.value;document.querySelector('#lineWidthVal').textContent=state.lineWidth;drawLinks();save()};document.querySelector('#fontPreset').onchange=e=>{workspace.settings.font=e.target.value;applyFont();save();toastMsg('字体已更新。')};boardWrap.addEventListener('pointerdown',startPan);applyFont();render();
 
