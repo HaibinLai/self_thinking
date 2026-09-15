@@ -56,7 +56,7 @@ function openSettings(ev){
   settingsRoot.classList.add('is-open');
   settingsRoot.setAttribute('aria-hidden','false');
   syncSettingsTriggers(true);
-  try{refreshLineColorSwatches();applyStyle();applyFont()}catch(_){}
+  try{applyFont()}catch(_){}
   queueMicrotask(()=>{try{settingsPanel&&settingsPanel.focus({preventScroll:true})}catch(_){}});
 }
 function closeSettings(ev){

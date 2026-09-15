@@ -112,7 +112,8 @@ node --test tests/board-store.test.cjs
 ## 常见改动入口（快速索引）
 
 - 新增/修改**连线标志**：改 `MARKERS` 数组 + `markerDefs()` 里的 `<marker>` 定义。
-- 调整**连线粗细范围**：改系统设置面板 `#lineWidth` 与连线详情 `#lwidth` 的 `min/max`，以及 `drawLinks` 里的默认值。
-- **系统设置**：`#openSettings` / `#openSettingsToolbar` 打开 `#settingsRoot` 对话框（字体 / 板面色 / 连线色 / 粗细）。用 `hidden` + `.is-open` 控制显示；Esc、点遮罩或「关闭」可收起。遮罩在打开后 350ms 内忽略点击，避免误触立刻关掉。
+- 调整**连线粗细范围**：改案件侧栏 `#lineWidth` 与连线详情 `#lwidth` 的 `min/max`，以及 `drawLinks` 里的默认值。
+- **案件侧栏板面外观**：`#boardColor`、`#lineColorSwatches`、`#lineWidth` / `#lineWidthVal`（本板默认色与粗细）。
+- **系统设置**：`#openSettings` / `#openSettingsToolbar` 打开 `#settingsRoot` 对话框（字体预设）。用 `hidden` + `.is-open` 控制显示；Esc、点遮罩或「关闭」可收起。遮罩在打开后 350ms 内忽略点击，避免误触立刻关掉。
 - 新增**卡片类型 / 思想尺度**：改 `typeColor`、`scaleClass`、`cardDimensions`，以及 `openInspector` 里的下拉选项和 CSS 卡片样式。
 - **导入 / 导出 / 云同步**（尚未实现）：围绕 `CaseboardStore` 与 `workspace` 对象扩展，注意迁移与容错。

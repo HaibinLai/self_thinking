@@ -18,6 +18,10 @@
     .strings line.link-hit:hover+line,.strings line.sel{filter:drop-shadow(0 0 3px var(--gold))}
     .style-row input[type=range]{width:120px;height:20px}
     .range-row{align-items:center}.range-row output{color:#cad0da;font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
+    .range-wrap{display:flex;align-items:center;gap:6px}
+    .case-style .style-row{margin:6px 0}
+    .case-style .swatches{margin:4px 0 8px}
+    .style-hint{margin:4px 0 0;font-size:11px;line-height:1.45;color:var(--muted)}
     .swatches{display:flex;flex-wrap:wrap;gap:7px}.swatch{width:22px;height:22px;border-radius:50%;border:2px solid #2b3545;cursor:pointer;padding:0;background:var(--c)}.swatch.on{border-color:#fff;box-shadow:0 0 0 2px var(--gold)}.inspector .swatch{border-color:#ccd3dd}.inspector .swatch.on{border-color:#202630;box-shadow:0 0 0 2px var(--gold)}
     #fontPreset{max-width:160px;min-width:0;font-size:12px;padding:5px 7px;background:#241c16;border:1px solid #4a3828;color:#e8dcc8;border-radius:7px}
     .brand-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
