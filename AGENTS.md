@@ -66,7 +66,7 @@ node --test tests/board-store.test.cjs
 }
 ```
 
-- **卡片 `cardScale`（思想尺度）**：`世界问题` / `研究判断` / `机制 / 局部问题` / `观察 / 证据`，映射到 CSS 类 `world` / `research` / `mechanism` / `evidence`，决定卡片尺寸与底色。缩放 < 55% 时进入 `far` 模式，卡片显示为圆点。
+- **卡片 `cardScale`（思想尺度）**：`世界问题` / `研究判断` / `机制 / 局部问题` / `观察 / 证据`，映射到 CSS 类 `world` / `research` / `mechanism` / `evidence`，决定卡片尺寸与底色。缩放 < 40%（`LOD_WORLD`）时进入分层 LOD：`世界问题` 保持完整卡片，其余（含链接剪报）加 `bubble` 类，显示为 `--type` 色点；舞台带 `lod-world`。放大后恢复。
 - **链接剪报**：`kind: '链接'` 或存在 `url` 时使用 CSS 类 `link`。字段：`url`（http/https）、可选 `preview`（自备封面图）、`note`（批注）。卡片面由 `cardFaceHtml` 渲染：优先 `preview`，否则 `thum.io` 页面缩略图，失败回退 Google favicon。粘贴单个网址或点「＋ 链接」调用 `addLinkCard`。
 - **连线 `links`**：每条是对象 `{from, to, marker, width, color}`。
   - `marker`：`none`（默认新建）/ `arrow` / `dot` / `diamond` / `bar`。
@@ -78,8 +78,9 @@ node --test tests/board-store.test.cjs
 
 - `CaseboardStore.load / save`（在 `board-store.js`）：读写 workspace，做版本校验与旧数据迁移。
 - `normalizeLinks(state)`：把连线数组升级为对象。
-- `render()`：重建所有卡片 DOM，然后 `drawLinks()` + `markCards()` + `applyStyle()` + `save()`。
-- `drawLinks()`：重建 SVG。先用 `markerDefs(color)` 生成 `<defs>` 里的标志；每条连线用 `edgePoint` 落到卡片边缘外侧再绘制，避免标志被卡片盖住；每条连线渲染一条透明 `.link-hit` 命中线（用于点击）+ 一条带 `marker-end` 的可见线；被选中的连线用金色高亮。
+- `render()`：重建所有卡片 DOM，然后 `markCards()` + `applyStyle()`（含 `applyCardLod`）+ `drawLinks()` + `save()`。
+- `applyCardLod()`：按 `scale < LOD_WORLD(0.4)` 给非「世界问题」卡片切换 `bubble`；跨阈值时 `applyStyle` 会重绘连线。
+- `drawLinks()`：重建 SVG。先用 `markerDefs(color)` 生成 `<defs>` 里的标志；每条连线用 `edgePoint` 落到卡片边缘外侧再绘制，避免标志被卡片盖住；气泡态用 DOM 实测尺寸或 `BUBBLE_SIZE`；每条连线渲染一条透明 `.link-hit` 命中线（用于点击）+ 一条带 `marker-end` 的可见线；被选中的连线用金色高亮。
 - `markerDefs(color)` / `MARKERS`：标志定义与下拉选项来源。新增标志类型时，同时改这两处。注意 `return (` 必须用括号包住模板字符串，否则换行会触发 ASI 导致返回 `undefined`。
 - `edgePoint(cx,cy,w,h,tx,ty,pad)`：从卡片中心朝目标方向落到矩形边缘外 `pad` 像素处。
 - `openInspector()`：卡片编辑面板。`openLinkInspector()` / `selectLink()` / `clearLinkSelection()`：连线编辑面板。
