@@ -10,10 +10,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <title>Caseboard — 推理工作台</title>
   <meta name="description" content="把线索、证据和推断放到同一张推理板上。" />
-  <link rel="stylesheet" href="styles.css?v=case-style1">
+  <link rel="stylesheet" href="styles.css?v=clip-detail2">
 </head>
 <body>
-  <main class="app">
+  <main class="app right-collapsed">
     <aside class="side" id="sidebar">
       <button class="btn panel-close" id="closeSidebar" aria-label="收起案件侧栏">收起 ‹</button>
       <div class="brand-row">
@@ -63,15 +63,27 @@
           <svg class="gear-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.2 7.2 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.55-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.49.49 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.86 14.52a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.3.59.22l2.39-.96c.5.39 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.55 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
         </button>
         <h1>推理板 <span id="count"></span></h1>
-        <select class="btn board-select" id="boardSelect" aria-label="切换板子"></select>
-        <button class="btn" id="newBoard">＋ 板子</button>
+        <div class="board-picker" id="boardPicker">
+          <button type="button" class="btn board-picker-trigger" id="boardPickerBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="boardPickerMenu">
+            <span class="board-picker-meta">板子</span>
+            <span class="board-picker-label" id="boardPickerLabel">当前板子</span>
+            <span class="board-picker-caret" aria-hidden="true">▾</span>
+          </button>
+          <div class="board-picker-menu" id="boardPickerMenu" hidden role="listbox" aria-labelledby="boardPickerBtn">
+            <div class="board-picker-head">选择板子</div>
+            <div class="board-picker-list" id="boardPickerList"></div>
+            <div class="board-picker-foot">
+              <button type="button" class="btn board-picker-new" id="newBoard">＋ 新建板子</button>
+            </div>
+          </div>
+        </div>
         <button class="btn" id="zoomOut" aria-label="缩小">－</button>
         <span class="zoom" id="zoomLabel">100%</span>
         <button class="btn" id="zoomIn" aria-label="放大">＋</button>
         <button class="btn" id="linkBtn">连线</button>
         <button class="btn" id="addLinkBtn">＋ 链接</button>
         <button class="btn primary" id="addBtn">＋ 新线索</button>
-        <button class="btn" id="toggleInspector" aria-controls="inspector" aria-expanded="true">详情</button>
+        <button class="btn" id="toggleInspector" aria-controls="clipDetail" aria-expanded="false">详情</button>
       </header>
       <div class="board-wrap" tabindex="0" aria-label="推理画布，粘贴文字可新建板子">
         <div class="stage" id="stage">
@@ -80,16 +92,14 @@
             <div class="empty" id="empty" hidden>在画布上粘贴网址钉上链接剪报<br>或粘贴文字新建板子。</div>
           </div>
         </div>
+        <div class="clip-detail" id="clipDetail" hidden aria-hidden="true">
+          <article class="clip-paper" id="clipPaper" role="dialog" aria-modal="false" aria-labelledby="clipHeading">
+            <button type="button" class="clip-close" id="closeClip" aria-label="关闭详情">关闭</button>
+            <div id="clipContent"></div>
+          </article>
+        </div>
       </div>
     </section>
-
-    <aside class="inspector" id="inspector">
-      <button class="btn panel-close" id="closeInspector" aria-label="收起详情侧栏">收起 ›</button>
-      <div id="inspectorContent">
-        <h2>放大一张卡片</h2>
-        <p class="empty-note">点线索卡可编辑；粘贴网址或点「＋ 链接」可钉上带预览的链接剪报并写批注；点连线可改颜色、标志或删除。</p>
-      </div>
-    </aside>
   </main>
 
   <div class="toast" id="toast" role="status"></div>
@@ -114,7 +124,7 @@
     </div>
   </div>
 
-  <script src="board-store.js?v=case-style1"></script>
-  <script src="app.js?v=case-style1"></script>
+  <script src="board-store.js?v=clip-detail2"></script>
+  <script src="app.js?v=clip-detail2"></script>
 </body>
 </html>

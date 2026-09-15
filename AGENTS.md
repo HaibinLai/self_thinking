@@ -67,7 +67,7 @@ node --test tests/board-store.test.cjs
 ```
 
 - **卡片 `cardScale`（思想尺度）**：`世界问题` / `研究判断` / `机制 / 局部问题` / `观察 / 证据`，映射到 CSS 类 `world` / `research` / `mechanism` / `evidence`，决定卡片尺寸与底色。缩放 < 40%（`LOD_WORLD`）时进入分层 LOD：`世界问题` 保持完整卡片，其余（含链接剪报）加 `bubble` 类，显示为 `--type` 色点；舞台带 `lod-world`。放大后恢复。
-- **链接剪报**：`kind: '链接'` 或存在 `url` 时使用 CSS 类 `link`。字段：`url`（http/https）、可选 `preview`（自备封面图）、`note`（批注）。卡片面由 `cardFaceHtml` 渲染：16:9 预览区 + 域名 chip；优先 `preview`，否则 `mini.s-shot.ru` 页面缩略图，失败回退 Google favicon，再失败或无网址显示占位文案。粘贴单个网址或点「＋ 链接」调用 `addLinkCard`。
+- **链接剪报**：`kind: '链接'` 或存在 `url` 时使用 CSS 类 `link`。字段：`url`（http/https）、可选 `preview`（自备封面图）、可选 `previewCache`（成功截图的压缩 data URL，存在 localStorage）、`note`（批注）。卡片面由 `cardFaceHtml` / `previewPick` 渲染：优先 `preview` → `previewCache` → `mini.s-shot.ru` 实时缩略图 → Google favicon。实时图 `onload` 后经 CORS `fetch` 校验（非 2xx / 超时占位图不缓存），再压成 JPEG（边长 ≤720、质量 ~0.7）写入 `previewCache`；之后即使截图服务返回 timeout 也继续显示缓存。详情面板有「刷新预览」可清缓存重抓。粘贴单个网址或点「＋ 链接」调用 `addLinkCard`。
 - **连线 `links`**：每条是对象 `{from, to, marker, width, color}`。
   - `marker`：`none`（默认新建）/ `arrow` / `dot` / `diamond` / `bar`。
   - `width`：该条连线粗细（px）；缺省回退 `state.lineWidth`。
@@ -78,15 +78,16 @@ node --test tests/board-store.test.cjs
 
 - `CaseboardStore.load / save`（在 `board-store.js`）：读写 workspace，做版本校验与旧数据迁移。
 - `normalizeLinks(state)`：把连线数组升级为对象。
-- `render()`：重建所有卡片 DOM，然后 `markCards()` + `applyStyle()`（含 `applyCardLod`）+ `drawLinks()` + `save()`。
-- `applyCardLod()`：按 `scale < LOD_WORLD(0.4)` 给非「世界问题」卡片切换 `bubble`；跨阈值时 `applyStyle` 会重绘连线。
-- `drawLinks()`：重建 SVG。先用 `markerDefs(color)` 生成 `<defs>` 里的标志；每条连线用 `edgePoint` 落到卡片边缘外侧再绘制，避免标志被卡片盖住；气泡态用 DOM 实测尺寸或 `BUBBLE_SIZE`；每条连线渲染一条透明 `.link-hit` 命中线（用于点击）+ 一条带 `marker-end` 的可见线；被选中的连线用金色高亮。
+- `render()`：重建所有卡片 DOM，然后 `markCards()` + `applyStyle()`（含 `applyCardLod`）+ `drawLinks()` + `scheduleSave()`（防抖）。平移只走 `applyCamera()`，不重建卡片；色板 `refreshLineColorSwatches()` 仅初始化与改色时刷新。
+- `applyCardLod()`：按 `scale < LOD_WORLD(0.4)` 给非「世界问题」卡片切换 `bubble`；跨阈值时 `applyCamera` 会重绘连线。
+- `drawLinks()` / `requestDrawLinks()`：重建 SVG；拖动中用 rAF 节流。先用 `markerDefs(color)` 生成 `<defs>` 里的标志；每条连线用 `edgePoint` 落到卡片边缘外侧再绘制，避免标志被卡片盖住；气泡态用 DOM 实测尺寸或 `BUBBLE_SIZE`；每条连线渲染一条透明 `.link-hit` 命中线（用于点击）+ 一条带 `marker-end` 的可见线；被选中的连线用金色高亮。
+- `previewPick` / `verifyAndCacheLive` / `linkShotLoad` / `linkShotErr`：链接预览优先级与本地缓存。
 - `markerDefs(color)` / `MARKERS`：标志定义与下拉选项来源。新增标志类型时，同时改这两处。注意 `return (` 必须用括号包住模板字符串，否则换行会触发 ASI 导致返回 `undefined`。
 - `edgePoint(cx,cy,w,h,tx,ty,pad)`：从卡片中心朝目标方向落到矩形边缘外 `pad` 像素处。
-- `openInspector()`：卡片编辑面板。`openLinkInspector()` / `selectLink()` / `clearLinkSelection()`：连线编辑面板。
-- `startDrag/moveDrag/endDrag`：拖动卡片（移动 6px 才算拖动）。`startPan/movePan/endPan`：平移画布。`wheelZoom/setZoom`：以指针为中心缩放（0.35–1.8）。
-- `newBoardFromText(text)`：粘贴文字或点「＋ 板子」时新建板子。`activateBoard(id)`：切换板子（会 `normalizeLinks` 并重置选中态）。
-- `save()`：把 `panels`、`camera` 写回 `state` 并持久化；失败时显示 `#storageError` 提示。
+- `openInspector()` / `openLinkInspector()`：在画布上打开报纸剪报浮层 `#clipDetail`（非右侧栏），含编辑字段与「刷新预览」。`selectLink()` / `clearLinkSelection()`：连线详情同用该浮层。
+- `startDrag/moveDrag/endDrag`：拖动卡片（移动 6px 才算拖动）。`startPan/movePan/endPan`：平移画布（同样 6px 阈值）；**平移不会打开/关闭详情**；空白处 pointerup 且未移动时才 `clearSelection()` / 关闭浮层。关闭按钮、Esc、「详情」切换也可收起浮层。
+- `newBoardFromText(text)`：粘贴文字或点「＋ 新建板子」时新建板子。`activateBoard(id)`：切换板子（会 `normalizeLinks` 并重置选中态）。
+- `save()` / `scheduleSave()`：把 `panels`、`camera` 写回 `state` 并持久化；失败时显示 `#storageError` 提示（含预览缓存占空间说明）。右侧详情栏已移除，`panels.right` 恒为 `false`。
 
 ## SVG 命中测试的注意事项
 

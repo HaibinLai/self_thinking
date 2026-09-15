@@ -11,34 +11,40 @@ if(state.boardColor==='#1b2738')state.boardColor='#6a4a32';
 state.boardColor ||= '#6a4a32'; state.lineColor ||= '#d95650'; state.lineWidth ||= 2; normalizeLinks(state);
 state.cards.forEach(c=>c.cardScale ||= (c.kind==='问题'?'世界问题':c.kind==='推断'?'研究判断':(c.kind==='观察'||c.kind==='来源'||c.kind==='下一步')?'观察 / 证据':'机制 / 局部问题'));
 if(state.camera){scale=state.camera.scale||1;camera.x=state.camera.x||0;camera.y=state.camera.y||0}
-const board=document.querySelector('#board'),stage=document.querySelector('#stage'),boardWrap=document.querySelector('.board-wrap'),svg=document.querySelector('#strings'),inspector=document.querySelector('#inspector'),toast=document.querySelector('#toast');
-const app=document.querySelector('.app'),sidebar=document.querySelector('#sidebar'),inspectorContent=document.querySelector('#inspectorContent');
+const board=document.querySelector('#board'),stage=document.querySelector('#stage'),boardWrap=document.querySelector('.board-wrap'),svg=document.querySelector('#strings'),toast=document.querySelector('#toast');
+const app=document.querySelector('.app'),sidebar=document.querySelector('#sidebar');
+const clipDetail=document.querySelector('#clipDetail'),clipPaper=document.querySelector('#clipPaper'),clipContent=document.querySelector('#clipContent');
 const narrowScreen=window.matchMedia('(max-width:900px)');
-let leftOpen=narrowScreen.matches?false:state.panels?.left!==false,rightOpen=narrowScreen.matches?false:state.panels?.right!==false;
+let leftOpen=narrowScreen.matches?false:state.panels?.left!==false;
+function syncDetailToggle(){
+  const open=isClipOpen();
+  const btn=document.querySelector('#toggleInspector');
+  if(btn){btn.setAttribute('aria-expanded',String(open));btn.classList.toggle('active',open)}
+}
 function updatePanels(){
   sidebar.hidden=!leftOpen;
-  inspector.removeAttribute('hidden');
-  inspector.setAttribute('aria-hidden',String(!rightOpen));
-  app.classList.toggle('left-collapsed',!leftOpen);app.classList.toggle('right-collapsed',!rightOpen);
+  app.classList.toggle('left-collapsed',!leftOpen);
+  app.classList.add('right-collapsed');
   document.querySelector('#toggleSidebar').setAttribute('aria-expanded',String(leftOpen));
-  document.querySelector('#toggleInspector').setAttribute('aria-expanded',String(rightOpen));
-}
-function animInspectorContent(){
-  if(window.matchMedia('(prefers-reduced-motion:reduce)').matches)return;
-  inspectorContent.classList.remove('content-pop');
-  void inspectorContent.offsetWidth;
-  inspectorContent.classList.add('content-pop');
+  syncDetailToggle();
 }
 function setPanel(which,open){
-  if(which==='left')leftOpen=open;else rightOpen=open;
-  if(narrowScreen.matches&&open){if(which==='left')rightOpen=false;else leftOpen=false}
+  if(which!=='left')return;
+  leftOpen=open;
+  if(narrowScreen.matches&&open){/* left only */}
   updatePanels();save();
 }
 document.querySelector('#toggleSidebar').onclick=()=>setPanel('left',!leftOpen);
-document.querySelector('#toggleInspector').onclick=()=>setPanel('right',!rightOpen);
 document.querySelector('#closeSidebar').onclick=()=>{setPanel('left',false);document.querySelector('#toggleSidebar').focus()};
-document.querySelector('#closeInspector').onclick=()=>{setPanel('right',false);document.querySelector('#toggleInspector').focus()};
-narrowScreen.addEventListener('change',()=>{if(narrowScreen.matches){leftOpen=false;rightOpen=false}else{leftOpen=state.panels?.left!==false;rightOpen=state.panels?.right!==false}updatePanels()});
+document.querySelector('#toggleInspector').onclick=()=>{
+  if(isClipOpen()){if(selected)saveDraft();hideClip();return}
+  if(selected)openInspector();
+  else if(selectedLink!=null)openLinkInspector();
+  else toastMsg('先点一张卡片或连线。');
+};
+document.querySelector('#closeClip').onclick=()=>dismissClip();
+if(clipPaper)clipPaper.addEventListener('pointerdown',e=>e.stopPropagation());
+narrowScreen.addEventListener('change',()=>{if(narrowScreen.matches)leftOpen=false;else leftOpen=state.panels?.left!==false;updatePanels();if(isClipOpen())positionClipNearSelection()});
 updatePanels();
 const settingsRoot=document.querySelector('#settingsRoot');
 const settingsPanel=document.querySelector('#settingsPanel');
@@ -77,10 +83,15 @@ if(settingsBackdrop)settingsBackdrop.addEventListener('click',e=>{
   closeSettings(e);
 });
 if(settingsPanel)settingsPanel.addEventListener('click',e=>e.stopPropagation());
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&isSettingsOpen()){e.preventDefault();closeSettings(e)}});
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape')return;
+  if(isBoardPickerOpen()){e.preventDefault();setBoardPickerOpen(false);boardPickerBtn?.focus();return}
+  if(isSettingsOpen()){e.preventDefault();closeSettings(e);return}
+  if(isClipOpen()||selected!=null||selectedLink!=null||linking){e.preventDefault();dismissClip()}
+});
 const typeColor={线索:'#e5b55c',来源:'#77b7d5',观察:'#77b7d5',推断:'#c68bf1',问题:'#ff7168',下一步:'#ff7168',链接:'#5a9f78'};
 const scaleClass={'世界问题':'world','研究判断':'research','机制 / 局部问题':'mechanism','观察 / 证据':'evidence'};
-window.addEventListener('resize',()=>drawLinks());
+window.addEventListener('resize',()=>{drawLinks();if(typeof isClipOpen==='function'&&isClipOpen())positionClipNearSelection()});
 const cardDimensions={world:[286,154],research:[228,123],mechanism:[185,104],evidence:[142,76],link:[220,210]};
 const esc=s=>String(s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const MARKERS=[['none','无'],['arrow','箭头'],['dot','圆点'],['diamond','菱形'],['bar','短杠']];
@@ -127,13 +138,113 @@ function hostOf(url){try{return new URL(url).hostname.replace(/^www\./,'')}catch
 function faviconOf(url){const h=hostOf(url);return h?`https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=128`:''}
 function shotOf(url){return `https://mini.s-shot.ru/1024x768/JPEG/480/Z100/?${encodeURIComponent(url)}`}
 function isLinkCard(c){return !!(c&&(c.url||c.kind==='链接'))}
+const PREVIEW_MAX_DIM=720,PREVIEW_JPEG_Q=.7,PREVIEW_MAX_CHARS=180000;
+function previewPick(c){
+  if(c.preview)return {src:c.preview,stage:'user'};
+  if(c.previewCache)return {src:c.previewCache,stage:'cache'};
+  if(c.url)return {src:shotOf(c.url),stage:'live'};
+  return {src:'',stage:'none'};
+}
+function cardFromShotImg(img){
+  const id=img&&img.closest&&img.closest('.card')?.dataset?.id;
+  return id?state.cards.find(x=>x.id===id):null;
+}
+function looksLikeTimeoutCanvas(ctx,w,h){
+  // site-shot 超时图：底边中灰扁条；真实网页截图底边很少是这种灰
+  const strip=Math.max(1,Math.floor(h*.1));
+  const lumStats=(x,y,sw,sh)=>{
+    const data=ctx.getImageData(x,y,sw,sh).data;let sum=0,sum2=0,n=data.length/4;
+    for(let i=0;i<data.length;i+=4){const yv=data[i]*.3+data[i+1]*.59+data[i+2]*.11;sum+=yv;sum2+=yv*yv}
+    const mean=sum/n;return {mean,v:sum2/n-mean*mean};
+  };
+  const top=lumStats(0,0,w,strip),bot=lumStats(0,h-strip,w,strip);
+  const midGrayFlat=s=>s.mean>175&&s.mean<220&&s.v<40;
+  return midGrayFlat(bot)&&top.mean>170&&top.mean<220;
+}
+function compressDrawnJpeg(draw,srcW,srcH){
+  const scale=Math.min(1,PREVIEW_MAX_DIM/Math.max(srcW,srcH));
+  const cw=Math.max(1,Math.round(srcW*scale)),ch=Math.max(1,Math.round(srcH*scale));
+  const canvas=document.createElement('canvas');canvas.width=cw;canvas.height=ch;
+  const ctx=canvas.getContext('2d');draw(ctx,cw,ch);
+  if(looksLikeTimeoutCanvas(ctx,cw,ch))throw new Error('timeout-shot');
+  let dataUrl=canvas.toDataURL('image/jpeg',PREVIEW_JPEG_Q);
+  if(dataUrl.length>PREVIEW_MAX_CHARS)dataUrl=canvas.toDataURL('image/jpeg',.55);
+  return dataUrl;
+}
+function imgToPreviewCache(img){
+  const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+  if(!w||!h)throw new Error('no-size');
+  return compressDrawnJpeg((ctx,cw,ch)=>ctx.drawImage(img,0,0,cw,ch),w,h);
+}
+async function blobToPreviewCache(blob){
+  const bmp=await createImageBitmap(blob);
+  try{
+    return compressDrawnJpeg((ctx,cw,ch)=>ctx.drawImage(bmp,0,0,cw,ch),bmp.width,bmp.height);
+  }finally{bmp.close?.()}
+}
+async function persistPreviewCache(card,dataUrl){
+  if(!card||!dataUrl||card.previewCache===dataUrl)return;
+  card.previewCache=dataUrl;scheduleSave();
+}
+function showCachedOrFallback(card,img){
+  if(card?.previewCache){
+    img.setAttribute('data-stage','cache');img.classList.remove('fallback');
+    img.removeAttribute('crossorigin');img.src=card.previewCache;
+    const w=img.closest('.link-shot-wrap');if(w)w.dataset.state='ok';
+    return true;
+  }
+  linkShotErr(img);return false;
+}
+async function verifyAndCacheLive(card,img){
+  if(!card)return;
+  const src=img.currentSrc||img.src;
+  if(src&&!src.startsWith('data:')){
+    try{
+      const res=await fetch(src,{mode:'cors',credentials:'omit'});
+      if(!res.ok){showCachedOrFallback(card,img);return}
+      const dataUrl=await blobToPreviewCache(await res.blob());
+      await persistPreviewCache(card,dataUrl);
+      img.setAttribute('data-stage','cache');
+      return;
+    }catch(_){}
+  }
+  try{
+    const dataUrl=imgToPreviewCache(img);
+    await persistPreviewCache(card,dataUrl);
+    img.setAttribute('data-stage','cache');
+  }catch(err){
+    if(String(err&&err.message)==='timeout-shot')showCachedOrFallback(card,img);
+  }
+}
+function linkShotLoad(img){
+  const wrap=img&&img.closest&&img.closest('.link-shot-wrap');
+  const stage=img.getAttribute('data-stage')||'';
+  if(wrap)wrap.dataset.state=img.classList.contains('fallback')?'icon':'ok';
+  if(stage==='fav'||stage==='cache')return;
+  const card=cardFromShotImg(img);if(!card)return;
+  if(stage==='live'){verifyAndCacheLive(card,img);return}
+  if(stage==='user'){
+    try{persistPreviewCache(card,imgToPreviewCache(img))}catch(_){}
+  }
+}
 function linkShotErr(img){
   const wrap=img&&img.closest&&img.closest('.link-shot-wrap');
+  const card=cardFromShotImg(img);
+  const stage=img.getAttribute('data-stage')||'';
+  if(card?.previewCache&&stage!=='cache'){
+    img.setAttribute('data-stage','cache');
+    img.classList.remove('fallback');
+    img.removeAttribute('crossorigin');
+    img.src=card.previewCache;
+    if(wrap)wrap.dataset.state='ok';
+    return;
+  }
   const fav=img.getAttribute('data-fav')||'';
-  if(fav&&img.getAttribute('data-stage')!=='fav'){
+  if(fav&&stage!=='fav'){
     img.setAttribute('data-stage','fav');
     img.classList.add('fallback');
     img.removeAttribute('data-fav');
+    img.removeAttribute('crossorigin');
     img.src=fav;
     if(wrap)wrap.dataset.state='icon';
     return;
@@ -150,13 +261,14 @@ function linkShotErr(img){
 }
 function cardFaceHtml(c){
   if(!isLinkCard(c))return `<div class="kind">${esc(c.cardScale)} · ${esc(c.kind)}</div><div class="title">${esc(c.title||'无标题')}</div><div class="excerpt">${esc(c.note||'')}</div>`;
-  const url=c.url||'',host=hostOf(url),fav=faviconOf(url),shot=c.preview||(url?shotOf(url):'');
+  const url=c.url||'',host=hostOf(url),fav=faviconOf(url),pick=previewPick(c);
   const hostLabel=host||'未填写网址',title=c.title||host||'网页链接',note=c.note||'';
   const kindExtra=c.kind&&c.kind!=='链接'?` · ${esc(c.kind)}`:'';
   const chip=`<div class="link-chip">${fav?`<img src="${esc(fav)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"/>`:''}<span>${esc(hostLabel)}</span></div>`;
   let media;
-  if(shot){
-    media=`<div class="link-shot-wrap" data-state="loading"><img class="link-shot" src="${esc(shot)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-fav="${esc(fav)}" onerror="linkShotErr(this)" onload="const w=this.closest('.link-shot-wrap');if(w)w.dataset.state=this.classList.contains('fallback')?'icon':'ok'"/>${chip}</div>`;
+  if(pick.src){
+    const cors=pick.src.startsWith('data:')?'':' crossorigin="anonymous"';
+    media=`<div class="link-shot-wrap" data-state="loading"><img class="link-shot" src="${esc(pick.src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${cors} data-stage="${esc(pick.stage)}" data-fav="${esc(fav)}" onerror="linkShotErr(this)" onload="linkShotLoad(this)"/>${chip}</div>`;
   }else if(fav){
     media=`<div class="link-shot-wrap" data-state="icon"><img class="link-shot fallback" src="${esc(fav)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-stage="fav" onerror="linkShotErr(this)"/>${chip}</div>`;
   }else{
@@ -185,7 +297,10 @@ function edgePoint(cx,cy,w,h,tx,ty,pad){
   const len=Math.hypot(dx,dy);x-=dx/len*pad;y-=dy/len*pad;
   return {x,y};
 }
-function save(){state.panels={left:leftOpen,right:rightOpen};state.camera={x:camera.x,y:camera.y,scale};try{CaseboardStore.save(localStorage,workspace);document.querySelector('#storageError').hidden=true}catch(error){document.querySelector('#storageError').hidden=false;document.querySelector('#storageError').textContent='本地保存失败，可能是存储空间已满。请保留当前页面，勿刷新或关闭。'}document.querySelector('#caseTitle').textContent=state.caseTitle;document.querySelector('#count').textContent=`${state.cards.length} 张卡片`}
+function save(){state.panels={left:leftOpen,right:false};state.camera={x:camera.x,y:camera.y,scale};try{CaseboardStore.save(localStorage,workspace);document.querySelector('#storageError').hidden=true}catch(error){document.querySelector('#storageError').hidden=false;document.querySelector('#storageError').textContent='本地保存失败，可能是存储空间已满（预览缓存也会占空间）。请保留当前页面，勿刷新或关闭。'}document.querySelector('#caseTitle').textContent=state.caseTitle;document.querySelector('#count').textContent=`${state.cards.length} 张卡片`;const bl=document.querySelector('#boardPickerLabel');if(bl)bl.textContent=state.caseTitle||'未命名板子'}
+let saveTimer=0;
+function scheduleSave(ms=320){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{saveTimer=0;save()},ms)}
+function saveNow(){clearTimeout(saveTimer);saveTimer=0;save()}
 const LOD_WORLD=.4,BUBBLE_SIZE=[14,14];
 function isWorldCard(c){return !!(c&&!isLinkCard(c)&&c.cardScale==='世界问题')}
 function shouldBubble(c){return scale<LOD_WORLD&&!isWorldCard(c)}
@@ -204,14 +319,31 @@ function applyCardLod(){
   });
   return changed;
 }
-function applyStyle(){boardWrap.style.backgroundColor=state.boardColor;boardWrap.style.backgroundPosition=`${camera.x}px ${camera.y}px`;document.querySelector('#boardColor').value=state.boardColor;document.querySelector('#lineWidth').value=state.lineWidth;document.querySelector('#lineWidthVal').textContent=state.lineWidth;stage.style.transform=`translate(${camera.x}px,${camera.y}px) scale(${scale})`;if(applyCardLod())drawLinks();document.querySelector('#zoomLabel').textContent=Math.round(scale*100)+'%'}
+function applyCamera(){
+  boardWrap.style.backgroundPosition=`${camera.x}px ${camera.y}px`;
+  stage.style.transform=`translate(${camera.x}px,${camera.y}px) scale(${scale})`;
+  document.querySelector('#zoomLabel').textContent=Math.round(scale*100)+'%';
+  if(applyCardLod())drawLinks();
+}
+function applyStyle(){
+  boardWrap.style.backgroundColor=state.boardColor;
+  const bc=document.querySelector('#boardColor'),lw=document.querySelector('#lineWidth'),lv=document.querySelector('#lineWidthVal');
+  if(bc&&bc.value!==state.boardColor)bc.value=state.boardColor;
+  if(lw&&String(lw.value)!==String(state.lineWidth))lw.value=state.lineWidth;
+  if(lv)lv.textContent=state.lineWidth;
+  applyCamera();
+}
+let lineSwatchesBound=false;
 function refreshLineColorSwatches(){
   const box=document.querySelector('#lineColorSwatches');if(!box)return;
   box.innerHTML=swatchHtml(state.lineColor,'default');
-  bindSwatches(box,()=>state.lineColor,c=>{state.lineColor=c;drawLinks();save()});
+  bindSwatches(box,()=>state.lineColor,c=>{state.lineColor=c;drawLinks();saveNow();refreshLineColorSwatches()});
+  lineSwatchesBound=true;
 }
 function markCards(){document.querySelectorAll('.card').forEach(e=>{e.classList.toggle('selected',e.dataset.id===selected);e.classList.toggle('target',e.dataset.id===linking)});boardWrap.classList.toggle('linking',!!linking);document.querySelector('#linkBtn').classList.toggle('active',!!linking)}
-function render(){board.querySelectorAll('.card').forEach(e=>e.remove());document.querySelector('#empty').hidden=state.cards.length>0;state.cards.forEach(c=>{let e=document.createElement('article');const link=isLinkCard(c);e.className=`card ${link?'link':(scaleClass[c.cardScale]||'mechanism')}`;e.dataset.id=c.id;e.style.cssText=`left:${c.x}px;top:${c.y}px;--tilt:${c.tilt||'0deg'};--type:${typeColor[c.kind]||(link?'#5a9f78':'#e5b55c')}`;e.innerHTML=`<button class="pin" aria-label="从这张卡片连线" title="从这里连线"></button>${cardFaceHtml(c)}`;e.addEventListener('pointerdown',startDrag);e.addEventListener('click',clickCard);let pin=e.querySelector('.pin');pin.addEventListener('pointerdown',x=>x.stopPropagation());pin.addEventListener('click',x=>{x.stopPropagation();enterLinkMode(c.id)});board.appendChild(e)});markCards();applyStyle();drawLinks();refreshLineColorSwatches();save()}
+function render(){board.querySelectorAll('.card').forEach(e=>e.remove());document.querySelector('#empty').hidden=state.cards.length>0;state.cards.forEach(c=>{let e=document.createElement('article');const link=isLinkCard(c);e.className=`card ${link?'link':(scaleClass[c.cardScale]||'mechanism')}`;e.dataset.id=c.id;e.style.cssText=`left:${c.x}px;top:${c.y}px;--tilt:${c.tilt||'0deg'};--type:${typeColor[c.kind]||(link?'#5a9f78':'#e5b55c')}`;e.innerHTML=`<button class="pin" aria-label="从这张卡片连线" title="从这里连线"></button>${cardFaceHtml(c)}`;e.addEventListener('pointerdown',startDrag);e.addEventListener('click',clickCard);let pin=e.querySelector('.pin');pin.addEventListener('pointerdown',x=>x.stopPropagation());pin.addEventListener('click',x=>{x.stopPropagation();enterLinkMode(c.id)});board.appendChild(e)});markCards();applyStyle();drawLinks();scheduleSave()}
+let linksRaf=0;
+function requestDrawLinks(){if(linksRaf)return;linksRaf=requestAnimationFrame(()=>{linksRaf=0;drawLinks()})}
 function drawLinks(){
   const sizes=new Map([...board.querySelectorAll('.card')].map(e=>[e.dataset.id,[e.offsetWidth,e.offsetHeight]]));
   const used=new Set([state.lineColor,...state.links.map(lk=>lk.color||state.lineColor)]);
@@ -233,25 +365,85 @@ function drawLinks(){
   svg.querySelectorAll('.link-hit').forEach(el=>el.addEventListener('click',ev=>{ev.stopPropagation();selectLink(+el.dataset.i)}));
 }
 function startDrag(e){let c=state.cards.find(x=>x.id===e.currentTarget.dataset.id),r=boardWrap.getBoundingClientRect();drag={c,dx:(e.clientX-r.left-camera.x)/scale-c.x,dy:(e.clientY-r.top-camera.y)/scale-c.y,startX:e.clientX,startY:e.clientY,moved:false,el:e.currentTarget};window.addEventListener('pointermove',moveDrag);window.addEventListener('pointerup',endDrag,{once:true})}
-function moveDrag(e){if(!drag)return;if(!drag.moved&&Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)<6)return;let r=boardWrap.getBoundingClientRect();drag.moved=true;drag.c.x=(e.clientX-r.left-camera.x)/scale-drag.dx;drag.c.y=(e.clientY-r.top-camera.y)/scale-drag.dy;drag.el.style.left=drag.c.x+'px';drag.el.style.top=drag.c.y+'px';drawLinks()}
-function endDrag(){window.removeEventListener('pointermove',moveDrag);if(drag?.moved)save();if(drag)setTimeout(()=>drag=null,0)}
+function moveDrag(e){if(!drag)return;if(!drag.moved&&Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)<6)return;let r=boardWrap.getBoundingClientRect();drag.moved=true;drag.c.x=(e.clientX-r.left-camera.x)/scale-drag.dx;drag.c.y=(e.clientY-r.top-camera.y)/scale-drag.dy;drag.el.style.left=drag.c.x+'px';drag.el.style.top=drag.c.y+'px';requestDrawLinks()}
+function endDrag(){window.removeEventListener('pointermove',moveDrag);if(drag?.moved){if(linksRaf){cancelAnimationFrame(linksRaf);linksRaf=0;drawLinks()}saveNow()}if(drag)setTimeout(()=>drag=null,0)}
 function enterLinkMode(id){linking=id||'choose-source';markCards();toastMsg(id?'现在点另一张卡片，红线会自动钉上。':'先点起点，再点终点。')}
 function clearLinkMode(){linking=null;markCards()}
 function clickCard(e){if(drag?.moved)return;if(selectedLink!=null){selectedLink=null;drawLinks()}let id=e.currentTarget.dataset.id;if(linking==='choose-source'){selected=id;linking=id;markCards();openInspector();toastMsg('已选起点；再点一张卡片即可连线。');return}if(linking&&linking!==id){if(!state.links.some(x=>x.from===linking&&x.to===id))state.links.push({from:linking,to:id,marker:'none',width:state.lineWidth,color:state.lineColor});selected=id;clearLinkMode();drawLinks();save();openInspector();toastMsg('红线已钉上。');return}selected=id;markCards();openInspector()}
+function isClipOpen(){return !!(clipDetail&&!clipDetail.hidden&&clipDetail.classList.contains('is-open'))}
+function animClipPaper(){
+  if(!clipPaper||window.matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+  clipPaper.classList.remove('is-animating');
+  void clipPaper.offsetWidth;
+  clipPaper.classList.add('is-animating');
+}
+function positionClipNearSelection(){
+  if(!clipPaper||!clipDetail||clipDetail.hidden)return;
+  clipPaper.classList.remove('anchored');
+  clipPaper.style.left='';clipPaper.style.top='';clipPaper.style.right='';clipPaper.style.bottom='';clipPaper.style.width='';clipPaper.style.transform='';
+  if(narrowScreen.matches)return;
+  const el=selected?board.querySelector(`.card[data-id="${CSS.escape(selected)}"]`):null;
+  const br=boardWrap.getBoundingClientRect();
+  const pad=14,pw=Math.min(440,br.width-pad*2);
+  if(!el){
+    clipPaper.style.left='50%';clipPaper.style.top='50%';clipPaper.style.width=pw+'px';
+    clipPaper.style.transform='translate(-50%,-50%) rotate(-.6deg)';
+    return;
+  }
+  const cr=el.getBoundingClientRect();
+  let left=cr.right-br.left+16;
+  let top=cr.top-br.top-12;
+  if(left+pw>br.width-pad)left=cr.left-br.left-pw-16;
+  if(left<pad)left=pad;
+  clipPaper.classList.add('anchored');
+  clipPaper.style.left=left+'px';clipPaper.style.top=Math.max(pad,top)+'px';clipPaper.style.width=pw+'px';clipPaper.style.transform='none';
+  requestAnimationFrame(()=>{
+    const ph=clipPaper.offsetHeight,maxTop=Math.max(pad,br.height-pad-ph);
+    let t=parseFloat(clipPaper.style.top)||pad;
+    if(t>maxTop)clipPaper.style.top=maxTop+'px';
+  });
+}
+function showClip(){
+  if(!clipDetail)return;
+  clipDetail.hidden=false;
+  clipDetail.classList.add('is-open');
+  clipDetail.setAttribute('aria-hidden','false');
+  positionClipNearSelection();
+  animClipPaper();
+  syncDetailToggle();
+}
+function hideClip(){
+  if(!clipDetail||clipDetail.hidden)return;
+  clipDetail.classList.remove('is-open');
+  clipDetail.hidden=true;
+  clipDetail.setAttribute('aria-hidden','true');
+  if(clipContent)clipContent.innerHTML='';
+  if(clipPaper){clipPaper.classList.remove('anchored','is-animating');clipPaper.style.left=clipPaper.style.top=clipPaper.style.width=clipPaper.style.transform=''}
+  syncDetailToggle();
+}
+function dismissClip(){
+  if(selected)saveDraft();
+  selected=null;selectedLink=null;linking=null;
+  markCards();drawLinks();
+  hideClip();
+}
 function openInspector(){
-  let c=state.cards.find(x=>x.id===selected);if(!c)return;setPanel('right',true);
+  let c=state.cards.find(x=>x.id===selected);if(!c||!clipContent)return;
   const kinds=['线索','链接','来源','观察','推断','问题','下一步'];
-  inspectorContent.innerHTML=`<h2>${isLinkCard(c)?'链接剪报':'线索详情'}</h2>${linking?'<div class="connection-help">连线模式已开启：点另一张卡片即可自动建立关系。</div>':''}`+
+  const heading=isLinkCard(c)?'链接剪报':'线索详情';
+  const cacheHint=c.previewCache?'已缓存本地预览。':'成功加载的截图会压缩缓存到本机，之后即使截图服务超时也会继续显示。';
+  clipContent.innerHTML=`<p class="clip-kicker">Caseboard · 剪报</p><h2 id="clipHeading">${heading}</h2>${linking?'<div class="connection-help">连线模式已开启：点另一张卡片即可自动建立关系。</div>':''}`+
     `<div class="field"><label>思想尺度</label><select id="fscale">${['世界问题','研究判断','机制 / 局部问题','观察 / 证据'].map(x=>`<option ${x===c.cardScale?'selected':''}>${x}</option>`).join('')}</select></div>`+
     `<div class="field"><label>类型</label><select id="fkind">${kinds.map(x=>`<option ${x===c.kind?'selected':''}>${x}</option>`).join('')}</select></div>`+
     `<div class="field"><label>标题</label><input id="ftitle" value="${esc(c.title||'')}" /></div>`+
     `<div class="field"><label>网址</label><input id="furl" type="url" placeholder="https://example.com/…" value="${esc(c.url||'')}" /></div>`+
     `<div class="field"><label>封面 / 预览图（可选）</label><input id="fpreview" type="url" placeholder="自备截图或封面图 URL，覆盖自动预览" value="${esc(c.preview||'')}" /></div>`+
-    `<p class="hint">${c.preview?'当前用自备封面图。':'填写网址后会尝试自动截图；失败则显示站点图标。'}也可粘贴自备图覆盖。纯前端无法保证所有网站都能截到。</p>`+
+    `<p class="hint">${c.preview?'当前用自备封面图。':'填写网址后会尝试自动截图；失败则显示站点图标。'}也可粘贴自备图覆盖。${cacheHint} 缓存为压缩图，卡片很多时可能占满浏览器本地存储。</p>`+
     `<div class="field"><label>批注</label><textarea id="fnote" placeholder="这则链接和当前推理有什么关系？">${esc(c.note||'')}</textarea></div>`+
-    `<div class="actions"><button class="btn success" id="saveCard">保存</button>${c.url?`<a class="btn" id="openUrl" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">打开网页</a>`:''}<button class="btn" id="makeLink">从这里连线</button><button class="btn" id="delCard">删除</button></div>`;
-  animInspectorContent();
+    `<div class="actions"><button class="btn success" id="saveCard">保存</button>${c.url?`<button class="btn" id="refreshPreview" type="button">刷新预览</button><a class="btn" id="openUrl" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">打开网页</a>`:''}<button class="btn" id="makeLink">从这里连线</button><button class="btn" id="delCard">删除</button></div>`;
+  showClip();
   document.querySelector('#saveCard').onclick=()=>{
+    const prevUrl=c.url,prevPreview=c.preview;
     c.cardScale=document.querySelector('#fscale').value;c.kind=document.querySelector('#fkind').value;
     c.title=document.querySelector('#ftitle').value.trim()||'无标题';
     const rawUrl=document.querySelector('#furl').value.trim();
@@ -259,50 +451,78 @@ function openInspector(){
     if(!c.url&&rawUrl)toastMsg('请填写以 http(s) 开头的有效网址。');
     c.preview=document.querySelector('#fpreview').value.trim();
     c.note=document.querySelector('#fnote').value.trim();
+    if(c.url!==prevUrl||c.preview!==prevPreview)delete c.previewCache;
     if(c.url&&c.kind!=='链接'&&!['来源','线索'].includes(c.kind))c.kind='链接';
     if(c.url&&(!c.title||c.title==='无标题'))c.title=hostOf(c.url)||'网页链接';
     render();openInspector();toastMsg('已保存。');
   };
+  const refreshBtn=document.querySelector('#refreshPreview');
+  if(refreshBtn)refreshBtn.onclick=()=>{
+    delete c.previewCache;
+    const rawUrl=document.querySelector('#furl')?.value.trim();
+    const parsed=tryParseUrl(rawUrl||c.url||'');
+    if(parsed)c.url=parsed;
+    c.preview=(document.querySelector('#fpreview')?.value.trim())||'';
+    render();openInspector();toastMsg('正在重新抓取预览…');
+  };
   document.querySelector('#makeLink').onclick=()=>enterLinkMode(c.id);
-  document.querySelector('#delCard').onclick=()=>{state.cards=state.cards.filter(x=>x.id!==c.id);state.links=state.links.filter(x=>x.from!==c.id&&x.to!==c.id);selected=null;selectedLink=null;clearLinkMode();setPanel('right',false);inspectorContent.innerHTML=EMPTY_INSPECTOR;render()};
+  document.querySelector('#delCard').onclick=()=>{state.cards=state.cards.filter(x=>x.id!==c.id);state.links=state.links.filter(x=>x.from!==c.id&&x.to!==c.id);selected=null;selectedLink=null;clearLinkMode();hideClip();render()};
 }
-const EMPTY_INSPECTOR='<h2>放大一张卡片</h2><p class="empty-note">点线索卡可编辑；粘贴网址或点「＋ 链接」可钉上带预览的链接剪报并写批注；点连线可改颜色、标志或删除。</p>';
 function selectLink(i){if(i<0||i>=state.links.length)return;selectedLink=i;selected=null;markCards();drawLinks();openLinkInspector()}
-function clearLinkSelection(){selectedLink=null;drawLinks();if(!selected){inspectorContent.innerHTML=EMPTY_INSPECTOR}}
+function clearLinkSelection(){selectedLink=null;drawLinks();if(!selected)hideClip()}
 function openLinkInspector(){
-  const lk=state.links[selectedLink];if(!lk)return;setPanel('right',true);
+  const lk=state.links[selectedLink];if(!lk||!clipContent)return;
   const from=state.cards.find(c=>c.id===lk.from),to=state.cards.find(c=>c.id===lk.to);
   const w=lk.width||state.lineWidth||2,col=lk.color||state.lineColor;
-  inspectorContent.innerHTML=`<h2>连线详情</h2>`+
+  clipContent.innerHTML=`<p class="clip-kicker">Caseboard · 连线</p><h2 id="clipHeading">连线详情</h2>`+
     `<p class="empty-note">${esc(from?.title||'?')} → ${esc(to?.title||'?')}</p>`+
     `<div class="field"><label>颜色</label><div class="swatches" id="lcolor">${swatchHtml(col,'link')}</div></div>`+
     `<div class="field"><label>标志</label><select id="lmarker">${MARKERS.map(([v,t])=>`<option value="${v}" ${(lk.marker||'none')===v?'selected':''}>${t}</option>`).join('')}</select></div>`+
     `<div class="field"><label>粗细 (<span id="lwval">${w}</span> px)</label><input type="range" id="lwidth" min="1" max="10" value="${w}"></div>`+
     `<div class="actions"><button class="btn" id="linkFlip">调换方向</button><button class="btn primary" id="linkDone">完成</button><button class="btn" id="linkDel">删除连线</button></div>`;
-  bindSwatches(document.querySelector('#lcolor'),()=>lk.color||state.lineColor,c=>{lk.color=c;drawLinks();save()});
-  document.querySelector('#lmarker').onchange=e=>{lk.marker=e.target.value;drawLinks();save()};
-  const lw=document.querySelector('#lwidth');lw.oninput=e=>{lk.width=+e.target.value;document.querySelector('#lwval').textContent=lk.width;drawLinks();save()};
-  document.querySelector('#linkFlip').onclick=()=>{[lk.from,lk.to]=[lk.to,lk.from];drawLinks();save();openLinkInspector()};
-  document.querySelector('#linkDone').onclick=()=>{clearLinkSelection();setPanel('right',false)};
-  document.querySelector('#linkDel').onclick=()=>{state.links.splice(selectedLink,1);selectedLink=null;drawLinks();save();inspectorContent.innerHTML=EMPTY_INSPECTOR;setPanel('right',false);toastMsg('连线已删除。')};
-  animInspectorContent();
+  showClip();
+  bindSwatches(document.querySelector('#lcolor'),()=>lk.color||state.lineColor,c=>{lk.color=c;drawLinks();saveNow()});
+  document.querySelector('#lmarker').onchange=e=>{lk.marker=e.target.value;drawLinks();saveNow()};
+  const lw=document.querySelector('#lwidth');lw.oninput=e=>{lk.width=+e.target.value;document.querySelector('#lwval').textContent=lk.width;drawLinks();saveNow()};
+  document.querySelector('#linkFlip').onclick=()=>{[lk.from,lk.to]=[lk.to,lk.from];drawLinks();saveNow();openLinkInspector()};
+  document.querySelector('#linkDone').onclick=()=>{clearLinkSelection();hideClip()};
+  document.querySelector('#linkDel').onclick=()=>{state.links.splice(selectedLink,1);selectedLink=null;drawLinks();saveNow();hideClip();toastMsg('连线已删除。')};
 }
 function clearSelection(){
-  const had=selected!=null||selectedLink!=null||linking;
+  const had=selected!=null||selectedLink!=null||linking||isClipOpen();
   if(selected)saveDraft();
   selected=null;selectedLink=null;linking=null;
   markCards();drawLinks();
-  inspectorContent.innerHTML=EMPTY_INSPECTOR;
+  hideClip();
   return had;
 }
-function startPan(e){if(e.target.closest('.card')||e.target.classList?.contains('link-hit'))return;clearSelection();pan={x:e.clientX,y:e.clientY,cx:camera.x,cy:camera.y,moved:false};boardWrap.classList.add('panning');window.addEventListener('pointermove',movePan);window.addEventListener('pointerup',endPan,{once:true})}
-function movePan(e){if(!pan)return;pan.moved=true;camera.x=pan.cx+e.clientX-pan.x;camera.y=pan.cy+e.clientY-pan.y;applyStyle()}
-function endPan(){window.removeEventListener('pointermove',movePan);boardWrap.classList.remove('panning');if(pan){save();setTimeout(()=>pan=null,0)}}
+function startPan(e){
+  if(e.target.closest('.card')||e.target.classList?.contains('link-hit')||e.target.closest('#clipDetail'))return;
+  pan={x:e.clientX,y:e.clientY,cx:camera.x,cy:camera.y,moved:false};
+  boardWrap.classList.add('panning');
+  window.addEventListener('pointermove',movePan);
+  window.addEventListener('pointerup',endPan,{once:true});
+}
+function movePan(e){
+  if(!pan)return;
+  if(!pan.moved&&Math.hypot(e.clientX-pan.x,e.clientY-pan.y)<6)return;
+  pan.moved=true;
+  camera.x=pan.cx+e.clientX-pan.x;camera.y=pan.cy+e.clientY-pan.y;
+  applyCamera();
+}
+function endPan(){
+  window.removeEventListener('pointermove',movePan);
+  boardWrap.classList.remove('panning');
+  if(!pan)return;
+  if(!pan.moved)clearSelection();
+  else scheduleSave();
+  setTimeout(()=>pan=null,0);
+}
 function setZoom(next,anchor){
   const r=boardWrap.getBoundingClientRect(),point=anchor||{x:r.width/2,y:r.height/2};
   const wx=(point.x-camera.x)/scale,wy=(point.y-camera.y)/scale;
   scale=Math.max(.35,Math.min(1.8,next));
-  camera.x=point.x-wx*scale;camera.y=point.y-wy*scale;applyStyle();save();
+  camera.x=point.x-wx*scale;camera.y=point.y-wy*scale;applyCamera();scheduleSave();
 }
 function wheelZoom(e){
   e.preventDefault();
@@ -313,10 +533,67 @@ function wheelZoom(e){
   setZoom(scale*Math.exp(-delta*.002),{x:e.clientX-r.left,y:e.clientY-r.top});
 }
 boardWrap.addEventListener('wheel',wheelZoom,{passive:false});
+const boardPicker=document.querySelector('#boardPicker');
+const boardPickerBtn=document.querySelector('#boardPickerBtn');
+const boardPickerMenu=document.querySelector('#boardPickerMenu');
+const boardPickerList=document.querySelector('#boardPickerList');
+const boardPickerLabel=document.querySelector('#boardPickerLabel');
+function isBoardPickerOpen(){return !!(boardPickerMenu&&!boardPickerMenu.hidden)}
+function setBoardPickerOpen(open){
+  if(!boardPickerMenu||!boardPickerBtn)return;
+  boardPickerMenu.hidden=!open;
+  boardPickerBtn.setAttribute('aria-expanded',String(open));
+  if(open)boardPickerList?.querySelector('.board-picker-item.is-current')?.focus();
+}
 function updateBoardSelect(){
-  const select=document.querySelector('#boardSelect');select.replaceChildren();
-  workspace.boards.forEach((b,i)=>{const option=document.createElement('option');option.value=b.id;option.textContent=`${i+1}. ${b.data.caseTitle}`;select.appendChild(option)});
-  select.value=workspace.activeId;
+  const active=workspace.boards.find(b=>b.id===workspace.activeId);
+  const title=active?.data?.caseTitle||'未命名板子';
+  if(boardPickerLabel)boardPickerLabel.textContent=title;
+  if(boardPickerBtn)boardPickerBtn.title=`当前板子：${title}`;
+  if(!boardPickerList)return;
+  const onlyOne=workspace.boards.length<=1;
+  boardPickerList.replaceChildren();
+  workspace.boards.forEach((b,i)=>{
+    const row=document.createElement('div');
+    row.className=`board-picker-row${b.id===workspace.activeId?' is-active':''}`;
+    row.setAttribute('role','presentation');
+    const item=document.createElement('button');
+    item.type='button';
+    item.className=`board-picker-item${b.id===workspace.activeId?' is-current':''}`;
+    item.setAttribute('role','option');
+    item.setAttribute('aria-selected',String(b.id===workspace.activeId));
+    item.dataset.id=b.id;
+    item.innerHTML=`<span class="board-picker-index">${i+1}</span><span class="board-picker-title">${esc(b.data.caseTitle||'未命名板子')}</span>${b.id===workspace.activeId?'<span class="board-picker-check" aria-hidden="true">✓</span>':''}`;
+    item.onclick=()=>{if(b.id!==workspace.activeId){saveDraft();activateBoard(b.id)}setBoardPickerOpen(false)};
+    const del=document.createElement('button');
+    del.type='button';
+    del.className='board-picker-del';
+    del.dataset.id=b.id;
+    del.textContent='删除';
+    del.title=onlyOne?'至少保留一块板子':'删除这块板子';
+    del.setAttribute('aria-label',`删除板子「${b.data.caseTitle||'未命名板子'}」`);
+    del.disabled=onlyOne;
+    del.onclick=e=>{e.stopPropagation();deleteBoard(b.id)};
+    row.append(item,del);
+    boardPickerList.appendChild(row);
+  });
+}
+function deleteBoard(id){
+  if(workspace.boards.length<=1){toastMsg('至少保留一块板子。');updateBoardSelect();return}
+  const entry=workspace.boards.find(b=>b.id===id);if(!entry)return;
+  const name=entry.data.caseTitle||'未命名板子';
+  if(!confirm(`确定删除板子「${name}」？\n板上的卡片与连线都会一并删除，此操作无法撤销。`))return;
+  const idx=workspace.boards.findIndex(b=>b.id===id);
+  const wasActive=workspace.activeId===id;
+  workspace.boards.splice(idx,1);
+  setBoardPickerOpen(false);
+  if(wasActive){
+    const next=workspace.boards[Math.max(0,idx-1)]||workspace.boards[0];
+    activateBoard(next.id);
+  }else{
+    updateBoardSelect();save();
+  }
+  toastMsg(`已删除「${name}」。`);
 }
 function saveDraft(){
   const c=state.cards.find(c=>c.id===selected),title=document.querySelector('#ftitle');
@@ -334,8 +611,8 @@ function activateBoard(id){
   window.removeEventListener('pointermove',moveDrag);window.removeEventListener('pointermove',movePan);
   boardWrap.classList.remove('panning');
   scale=state.camera?.scale||1;camera={x:state.camera?.x||0,y:state.camera?.y||0};
-  leftOpen=narrowScreen.matches?false:state.panels?.left!==false;rightOpen=false;updatePanels();
-  inspectorContent.innerHTML=EMPTY_INSPECTOR;
+  leftOpen=narrowScreen.matches?false:state.panels?.left!==false;updatePanels();
+  hideClip();
   render();updateBoardSelect();boardWrap.focus({preventScroll:true});
 }
 function newBoardFromText(text=''){
@@ -343,17 +620,18 @@ function newBoardFromText(text=''){
   const title=text.trim().split(/\r?\n/).find(line=>line.trim())?.trim().slice(0,40)||'未命名板子';
   const id=crypto.randomUUID();
   workspace.boards.push({id,data:{caseTitle:title,cards:[],links:[],boardColor:state.boardColor,lineColor:state.lineColor,lineWidth:state.lineWidth||2,camera:{x:0,y:0,scale:1},panels:{left:false,right:false}}});
+  setBoardPickerOpen(false);
   activateBoard(id);
   if(text){
-    setPanel('right',true);
     const r=boardWrap.getBoundingClientRect();
     const card={id:crypto.randomUUID(),cardScale:'研究判断',kind:'线索',title,note:text,x:r.width/2-114,y:r.height/2-62,tilt:'0deg'};
     state.cards.push(card);selected=card.id;render();openInspector();boardWrap.focus({preventScroll:true});
   }
   toastMsg(text?'已新建板子，全文已放入卡片。':'已新建空白板子。');
 }
-document.querySelector('#boardSelect').onchange=e=>{saveDraft();activateBoard(e.target.value)};
-document.querySelector('#newBoard').onclick=()=>newBoardFromText();
+boardPickerBtn?.addEventListener('click',e=>{e.stopPropagation();setBoardPickerOpen(!isBoardPickerOpen())});
+document.querySelector('#newBoard')?.addEventListener('click',()=>{setBoardPickerOpen(false);newBoardFromText()});
+document.addEventListener('pointerdown',e=>{if(isBoardPickerOpen()&&boardPicker&&!boardPicker.contains(e.target))setBoardPickerOpen(false)});
 document.addEventListener('paste',e=>{
   if(e.defaultPrevented||e.target instanceof Element&&(e.target.closest('input,textarea,select')||e.target.isContentEditable))return;
   const text=e.clipboardData?.getData('text/plain');if(!text||!text.trim())return;
@@ -375,5 +653,5 @@ function addLinkCard(url=''){
 function add(){let r=boardWrap.getBoundingClientRect(),c={id:crypto.randomUUID(),cardScale:'观察 / 证据',kind:'线索',title:'新线索',note:'它让我想到什么？证据是什么？',x:(r.width/2-camera.x)/scale-71,y:(r.height/2-camera.y)/scale-38,tilt:'0deg'};state.cards.push(c);selected=c.id;render();openInspector();document.querySelector('#ftitle').focus();document.querySelector('#ftitle').select()}
 function toastMsg(m){toast.textContent=m;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
 document.querySelector('#addLinkBtn').onclick=()=>addLinkCard();
-document.querySelector('#addBtn').onclick=add;document.querySelector('#linkBtn').onclick=()=>{if(linking){clearLinkMode();toastMsg('已退出连线模式。');return}enterLinkMode(selected)};document.querySelector('#zoomIn').onclick=()=>setZoom(Math.min(1.8,+(scale+.1).toFixed(2)));document.querySelector('#zoomOut').onclick=()=>setZoom(Math.max(.35,+(scale-.1).toFixed(2)));document.querySelector('#boardColor').oninput=e=>{state.boardColor=e.target.value;applyStyle();save()};document.querySelector('#lineWidth').oninput=e=>{state.lineWidth=+e.target.value;document.querySelector('#lineWidthVal').textContent=state.lineWidth;drawLinks();save()};document.querySelector('#fontPreset').onchange=e=>{workspace.settings.font=e.target.value;applyFont();save();toastMsg('字体已更新。')};boardWrap.addEventListener('pointerdown',startPan);applyFont();render();
+document.querySelector('#addBtn').onclick=add;document.querySelector('#linkBtn').onclick=()=>{if(linking){clearLinkMode();toastMsg('已退出连线模式。');return}enterLinkMode(selected)};document.querySelector('#zoomIn').onclick=()=>setZoom(Math.min(1.8,+(scale+.1).toFixed(2)));document.querySelector('#zoomOut').onclick=()=>setZoom(Math.max(.35,+(scale-.1).toFixed(2)));document.querySelector('#boardColor').oninput=e=>{state.boardColor=e.target.value;applyStyle();scheduleSave()};document.querySelector('#lineWidth').oninput=e=>{state.lineWidth=+e.target.value;document.querySelector('#lineWidthVal').textContent=state.lineWidth;drawLinks();scheduleSave()};document.querySelector('#fontPreset').onchange=e=>{workspace.settings.font=e.target.value;applyFont();saveNow();toastMsg('字体已更新。')};boardWrap.addEventListener('pointerdown',startPan);applyFont();refreshLineColorSwatches();render();
 
