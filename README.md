@@ -56,8 +56,11 @@ python3 -m http.server 8000 --bind 127.0.0.1 --directory dist
 
 ```text
 dist/
-  index.html   # 页面结构、内联 CSS 和交互逻辑
+  index.html   # 页面结构
+  styles.css   # 样式（布局、软木板主题、卡片、动画）
+  app.js       # 交互逻辑（画布、卡片、连线、设置、链接剪报）
   board-store.js # 多板子存储及旧数据迁移
+  favicon.svg  # 站点图标
 tests/
   board-store.test.cjs # 迁移、全文保存与存储失败测试
 .github/workflows/
@@ -67,7 +70,7 @@ README.md      # 运行和代码说明
 .gitignore     # 本地文件排除规则
 ```
 
-初始代码来自 `Caseboard-source.zip`（站点 v2）。压缩包仅包含 `dist/index.html` 和 `.openai/hosting.json`，没有独立的 `src/`、依赖清单或构建配置。尽管目录名为 `dist`，该 HTML 包含完整应用。
+初始代码来自 `Caseboard-source.zip`（站点 v2）。压缩包仅包含 `dist/index.html` 和 `.openai/hosting.json`，没有独立的 `src/`、依赖清单或构建配置。当前仍为零依赖静态站点：样式与脚本已拆到独立文件，无需打包。
 
 2026-09-13 同步到已发布站点 v3；Sites 记录的源提交为 `c622d1a7880e6f3dcb9c6914380ecaf80cd968ed`。本次从公开站点响应提取应用 HTML，移除了托管层注入的 Cloudflare challenge 脚本；并非直接导出该源提交的归档。
 
