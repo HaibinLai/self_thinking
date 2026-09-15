@@ -12,14 +12,14 @@
     .app{--left-width:260px;--right-width:315px;grid-template-columns:var(--left-width) minmax(0,1fr) var(--right-width)}
     .app.left-collapsed{--left-width:0px}.app.right-collapsed{--right-width:0px}
     .side{grid-column:1;grid-row:1;min-height:0;overflow:auto}.workspace{grid-column:2;grid-row:1;min-height:0;grid-template-rows:auto minmax(0,1fr)}
-    .inspector{grid-column:3;grid-row:1;min-height:0}.side[hidden],.inspector[hidden]{display:none!important}
+    .inspector{grid-column:3;grid-row:1;min-height:0}.side[hidden]{display:none!important}
     .toolbar{min-height:74px;flex-wrap:wrap;padding:12px 16px;gap:8px}.toolbar .btn{white-space:nowrap}
     .panel-close{align-self:flex-end;font-size:12px;padding:5px 9px}.inspector>.panel-close{display:block;margin:0 0 14px auto}
     .btn:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
     @media(max-width:900px){
       .app{grid-template-columns:0 minmax(0,1fr) 0}
-      .side,.inspector{position:fixed;z-index:4;top:0;bottom:0;width:min(315px,88vw);transform:none;transition:none;box-shadow:0 0 25px #0004}
-      .side{display:flex;left:0}.inspector{right:0}.toolbar h1{font-size:15px}
+      .side{position:fixed;z-index:4;top:0;bottom:0;left:0;width:min(315px,88vw);display:flex;box-shadow:0 0 25px #0004}
+      .toolbar h1{font-size:15px}
     }
     .board-select{max-width:210px;min-width:90px;text-overflow:ellipsis}
     .board-wrap:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
@@ -166,6 +166,37 @@
     .empty-note{color:#6a5c4c}.field label{color:#7a6a55}
     .field input,.field textarea,.field select{background:#fffaf0;border-color:#d2c2a4;color:#241c14}
     .inspector .btn{background:#fffaf0;border-color:#cbb89a;color:#241c14}
+    .hint{font-size:12px;color:#7a6a55;line-height:1.45;margin:0 0 8px}
+
+    /* 详情面板滑入 + 内容弹出 */
+    @property --right-width{syntax:'<length>';inherits:true;initial-value:315px}
+    @property --left-width{syntax:'<length>';inherits:true;initial-value:260px}
+    .app{transition:--right-width .42s cubic-bezier(.22,1,.36,1),--left-width .42s cubic-bezier(.22,1,.36,1),grid-template-columns .42s cubic-bezier(.22,1,.36,1)}
+    .inspector{
+      overflow:auto;min-width:0;
+      transition:opacity .28s ease,transform .42s cubic-bezier(.22,1,.36,1),box-shadow .42s ease,border-color .3s;
+      transform:translateX(0);opacity:1
+    }
+    .app.right-collapsed .inspector{
+      opacity:0;transform:translateX(28px);pointer-events:none;border-color:transparent;overflow:hidden
+    }
+    #inspectorContent.content-pop{animation:inspectorPop .38s cubic-bezier(.22,1,.36,1) both}
+    @keyframes inspectorPop{
+      from{opacity:0;transform:translateY(14px) scale(.97)}
+      to{opacity:1;transform:none}
+    }
+    @media(max-width:900px){
+      .inspector{
+        position:fixed;z-index:5;top:0;right:0;bottom:0;width:min(315px,88vw);
+        transform:translateX(100%);opacity:1;box-shadow:-10px 0 36px rgba(0,0,0,.4);
+        transition:transform .42s cubic-bezier(.22,1,.36,1)
+      }
+      .app:not(.right-collapsed) .inspector{transform:translateX(0);pointer-events:auto}
+      .app.right-collapsed .inspector{transform:translateX(110%);opacity:1;pointer-events:none}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .app,.inspector,#inspectorContent.content-pop{transition:none!important;animation:none!important}
+    }
   </style>
 </head>
 <body>
@@ -193,10 +224,18 @@
   const narrowScreen=window.matchMedia('(max-width:900px)');
   let leftOpen=narrowScreen.matches?false:state.panels?.left!==false,rightOpen=narrowScreen.matches?false:state.panels?.right!==false;
   function updatePanels(){
-    sidebar.hidden=!leftOpen;inspector.hidden=!rightOpen;
+    sidebar.hidden=!leftOpen;
+    inspector.removeAttribute('hidden');
+    inspector.setAttribute('aria-hidden',String(!rightOpen));
     app.classList.toggle('left-collapsed',!leftOpen);app.classList.toggle('right-collapsed',!rightOpen);
     document.querySelector('#toggleSidebar').setAttribute('aria-expanded',String(leftOpen));
     document.querySelector('#toggleInspector').setAttribute('aria-expanded',String(rightOpen));
+  }
+  function animInspectorContent(){
+    if(window.matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+    inspectorContent.classList.remove('content-pop');
+    void inspectorContent.offsetWidth;
+    inspectorContent.classList.add('content-pop');
   }
   function setPanel(which,open){
     if(which==='left')leftOpen=open;else rightOpen=open;
@@ -302,6 +341,7 @@
       `<p class="hint">无自备预览时，会尝试用公开缩略图服务显示页面截图；失败则退回站点图标。纯前端无法保证所有网站都能截到。</p>`+
       `<div class="field"><label>批注</label><textarea id="fnote" placeholder="这则链接和当前推理有什么关系？">${esc(c.note||'')}</textarea></div>`+
       `<div class="actions"><button class="btn primary" id="saveCard">保存</button>${c.url?`<a class="btn" id="openUrl" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">打开网页</a>`:''}<button class="btn" id="makeLink">从这里连线</button><button class="btn" id="delCard">删除</button></div>`;
+    animInspectorContent();
     document.querySelector('#saveCard').onclick=()=>{
       c.cardScale=document.querySelector('#fscale').value;c.kind=document.querySelector('#fkind').value;
       c.title=document.querySelector('#ftitle').value.trim()||'无标题';
@@ -336,6 +376,7 @@
     document.querySelector('#linkFlip').onclick=()=>{[lk.from,lk.to]=[lk.to,lk.from];drawLinks();save();openLinkInspector()};
     document.querySelector('#linkDone').onclick=()=>{clearLinkSelection();setPanel('right',false)};
     document.querySelector('#linkDel').onclick=()=>{state.links.splice(selectedLink,1);selectedLink=null;drawLinks();save();inspectorContent.innerHTML=EMPTY_INSPECTOR;setPanel('right',false);toastMsg('连线已删除。')};
+    animInspectorContent();
   }
   function clearSelection(){
     const had=selected!=null||selectedLink!=null||linking;
