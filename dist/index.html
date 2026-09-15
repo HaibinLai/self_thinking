@@ -32,6 +32,7 @@
     .style-row input[type=range]{width:120px;height:20px}
     .range-row{align-items:center}.range-row output{color:#cad0da;font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
     .swatches{display:flex;flex-wrap:wrap;gap:7px}.swatch{width:22px;height:22px;border-radius:50%;border:2px solid #2b3545;cursor:pointer;padding:0;background:var(--c)}.swatch.on{border-color:#fff;box-shadow:0 0 0 2px var(--gold)}.inspector .swatch{border-color:#ccd3dd}.inspector .swatch.on{border-color:#202630;box-shadow:0 0 0 2px var(--gold)}
+    #fontPreset{max-width:150px;min-width:0;font-size:12px;padding:5px 7px;background:#241c16;border-color:#4a3828;color:#e8dcc8;border-radius:7px}
     @media(max-width:600px){.board-select{max-width:150px}}
 
     /* —— 福尔摩斯式推理墙：软木板 + 剪报 + 图钉 —— */
@@ -206,7 +207,7 @@
 </head>
 <body>
   <main class="app">
-    <aside class="side" id="sidebar"><button class="btn panel-close" id="closeSidebar" aria-label="收起案件侧栏">收起 ‹</button><div class="brand"><span class="brand-mark">⌕</span> Caseboard</div><div class="case-name"><small>当前案件</small><strong id="caseTitle">关于“AI 与人的位置”</strong></div><section><p class="section-title">线索类型</p><div class="legend"><div><i class="dot lead"></i>线索</div><div><i class="dot source"></i>来源</div><div><i class="dot idea"></i>推断</div><div><i class="dot question"></i>待问问题</div><div><i class="dot" style="background:#5a9f78"></i>链接</div></div></section><section><p class="section-title">案件风格</p><label class="style-row">板面颜色 <input type="color" id="boardColor" value="#6a4a32"></label><label class="style-row">连线颜色</label><div class="swatches" id="lineColorSwatches" role="group" aria-label="连线默认颜色"></div><label class="style-row range-row">连线粗细 <span style="display:flex;align-items:center;gap:6px"><input type="range" id="lineWidth" min="1" max="10" value="2"><output id="lineWidthVal">2</output></span></label></section><div class="side-foot">画布上粘贴网址可加入链接剪报；粘贴其他文字可新建板子。<br>所有板子保存在这台设备上。<br>你不是在收集答案，而是在留下推理的轨迹。</div></aside>
+    <aside class="side" id="sidebar"><button class="btn panel-close" id="closeSidebar" aria-label="收起案件侧栏">收起 ‹</button><div class="brand"><span class="brand-mark">⌕</span> Caseboard</div><div class="case-name"><small>当前案件</small><strong id="caseTitle">关于“AI 与人的位置”</strong></div><section><p class="section-title">线索类型</p><div class="legend"><div><i class="dot lead"></i>线索</div><div><i class="dot source"></i>来源</div><div><i class="dot idea"></i>推断</div><div><i class="dot question"></i>待问问题</div><div><i class="dot" style="background:#5a9f78"></i>链接</div></div></section><section><p class="section-title">设置</p><label class="style-row">字体 <select id="fontPreset" aria-label="界面字体"><option value="instrument">精致 · Instrument</option><option value="classic">经典 · 系统</option><option value="news">报纸 · 衬线</option><option value="rounded">圆润 · 圆角</option></select></label><label class="style-row">板面颜色 <input type="color" id="boardColor" value="#6a4a32"></label><label class="style-row">连线颜色</label><div class="swatches" id="lineColorSwatches" role="group" aria-label="连线默认颜色"></div><label class="style-row range-row">连线粗细 <span style="display:flex;align-items:center;gap:6px"><input type="range" id="lineWidth" min="1" max="10" value="2"><output id="lineWidthVal">2</output></span></label></section><div class="side-foot">画布上粘贴网址可加入链接剪报；粘贴其他文字可新建板子。<br>所有板子保存在这台设备上。<br>你不是在收集答案，而是在留下推理的轨迹。</div></aside>
     <section class="workspace"><header class="toolbar"><button class="btn" id="toggleSidebar" aria-controls="sidebar" aria-expanded="true">案件</button><h1>推理板 <span id="count"></span></h1><select class="btn board-select" id="boardSelect" aria-label="切换板子"></select><button class="btn" id="newBoard">＋ 板子</button><button class="btn" id="zoomOut" aria-label="缩小">－</button><span class="zoom" id="zoomLabel">100%</span><button class="btn" id="zoomIn" aria-label="放大">＋</button><button class="btn" id="linkBtn">连线</button><button class="btn" id="addLinkBtn">＋ 链接</button><button class="btn primary" id="addBtn">＋ 新线索</button><button class="btn" id="toggleInspector" aria-controls="inspector" aria-expanded="true">详情</button></header><div class="board-wrap" tabindex="0" aria-label="推理画布，粘贴文字可新建板子"><div class="stage" id="stage"><div class="board" id="board"><svg class="strings" id="strings"></svg><div class="empty" id="empty" hidden>在画布上粘贴网址钉上链接剪报<br>或粘贴文字新建板子。</div></div></div></div></section>
     <aside class="inspector" id="inspector"><button class="btn panel-close" id="closeInspector" aria-label="收起详情侧栏">收起 ›</button><div id="inspectorContent"><h2>放大一张卡片</h2><p class="empty-note">点线索卡可编辑；粘贴网址或点「＋ 链接」可钉上带预览的链接剪报并写批注；点连线可改颜色、标志或删除。</p></div></aside>
   </main><div class="toast" id="toast" role="status"></div><div id="storageError" role="alert" hidden></div>
@@ -219,6 +220,7 @@
    {id:'d',kind:'问题',title:'我想成为怎样的人？',note:'不是与模型比赛写代码，而是能让模型在重要问题上变成放大器。',x:266,y:413,tilt:'1.5deg'},
    {id:'e',kind:'下一步',title:'找一个真实的反常现象',note:'从一个让我不服气的系统行为开始观察。',x:654,y:506,tilt:'-1deg'}],links:[['a','b'],['b','c'],['c','d'],['d','e']]};
   const workspace=CaseboardStore.load(localStorage,DEFAULT);
+  workspace.settings||={};workspace.settings.font||='instrument';
   let state=workspace.boards.find(b=>b.id===workspace.activeId).data,selected=null,selectedLink=null,linking=null,drag=null,pan=null,scale=1,camera={x:0,y:0};
   if(state.boardColor==='#1b2738')state.boardColor='#6a4a32';
   state.boardColor ||= '#6a4a32'; state.lineColor ||= '#d95650'; state.lineWidth ||= 2; normalizeLinks(state);
@@ -263,6 +265,36 @@
     ['#d95650','红'],['#e5b55c','金'],['#77b7d5','蓝'],['#c68bf1','紫'],
     ['#5ecf8e','绿'],['#ff8a5b','橙'],['#f0e6d2','米'],['#8e98a9','灰']
   ];
+  const FONT_PRESETS={
+    instrument:{
+      label:'精致 · Instrument',
+      sans:'"Instrument Sans","PingFang SC","Hiragino Sans GB","Noto Sans SC",ui-sans-serif,system-ui,sans-serif',
+      serif:'"Instrument Serif","Songti SC","Noto Serif SC",Georgia,serif'
+    },
+    classic:{
+      label:'经典 · 系统',
+      sans:'ui-sans-serif,system-ui,"PingFang SC","Hiragino Sans GB",sans-serif',
+      serif:'Georgia,"Songti SC","Noto Serif SC",serif'
+    },
+    news:{
+      label:'报纸 · 衬线',
+      sans:'"Instrument Sans","PingFang SC",ui-sans-serif,sans-serif',
+      serif:'Georgia,"Iowan Old Style","Songti SC","Noto Serif SC",serif'
+    },
+    rounded:{
+      label:'圆润 · 圆角',
+      sans:'ui-rounded,"SF Pro Rounded","PingFang SC",system-ui,sans-serif',
+      serif:'"Iowan Old Style",Palatino,"Songti SC",Georgia,serif'
+    }
+  };
+  function applyFont(){
+    const key=workspace.settings?.font||'instrument';
+    const preset=FONT_PRESETS[key]||FONT_PRESETS.instrument;
+    document.documentElement.style.setProperty('--font-sans',preset.sans);
+    document.documentElement.style.setProperty('--font-serif',preset.serif);
+    const sel=document.querySelector('#fontPreset');
+    if(sel&&sel.value!==key)sel.value=FONT_PRESETS[key]?key:'instrument';
+  }
   function normalizeLinks(s){if(!Array.isArray(s.links))s.links=[];s.links=s.links.map(l=>Array.isArray(l)?{from:l[0],to:l[1],marker:'arrow'}:l)}
   function tryParseUrl(text){
     const s=String(text||'').trim();if(!s||/\s/.test(s))return null;
@@ -471,6 +503,6 @@
   function add(){let r=boardWrap.getBoundingClientRect(),c={id:crypto.randomUUID(),cardScale:'观察 / 证据',kind:'线索',title:'新线索',note:'它让我想到什么？证据是什么？',x:(r.width/2-camera.x)/scale-71,y:(r.height/2-camera.y)/scale-38,tilt:'0deg'};state.cards.push(c);selected=c.id;render();openInspector();document.querySelector('#ftitle').focus();document.querySelector('#ftitle').select()}
   function toastMsg(m){toast.textContent=m;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
   document.querySelector('#addLinkBtn').onclick=()=>addLinkCard();
-  document.querySelector('#addBtn').onclick=add;document.querySelector('#linkBtn').onclick=()=>{if(linking){clearLinkMode();toastMsg('已退出连线模式。');return}enterLinkMode(selected)};document.querySelector('#zoomIn').onclick=()=>setZoom(Math.min(1.8,+(scale+.1).toFixed(2)));document.querySelector('#zoomOut').onclick=()=>setZoom(Math.max(.35,+(scale-.1).toFixed(2)));document.querySelector('#boardColor').oninput=e=>{state.boardColor=e.target.value;applyStyle();save()};document.querySelector('#lineWidth').oninput=e=>{state.lineWidth=+e.target.value;document.querySelector('#lineWidthVal').textContent=state.lineWidth;drawLinks();save()};boardWrap.addEventListener('pointerdown',startPan);render();
+  document.querySelector('#addBtn').onclick=add;document.querySelector('#linkBtn').onclick=()=>{if(linking){clearLinkMode();toastMsg('已退出连线模式。');return}enterLinkMode(selected)};document.querySelector('#zoomIn').onclick=()=>setZoom(Math.min(1.8,+(scale+.1).toFixed(2)));document.querySelector('#zoomOut').onclick=()=>setZoom(Math.max(.35,+(scale-.1).toFixed(2)));document.querySelector('#boardColor').oninput=e=>{state.boardColor=e.target.value;applyStyle();save()};document.querySelector('#lineWidth').oninput=e=>{state.lineWidth=+e.target.value;document.querySelector('#lineWidthVal').textContent=state.lineWidth;drawLinks();save()};document.querySelector('#fontPreset').onchange=e=>{workspace.settings.font=e.target.value;applyFont();save();toastMsg('字体已更新。')};boardWrap.addEventListener('pointerdown',startPan);applyFont();render();
   </script>
 </body></html>
