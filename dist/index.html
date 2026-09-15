@@ -16,7 +16,10 @@
   <main class="app">
     <aside class="side" id="sidebar">
       <button class="btn panel-close" id="closeSidebar" aria-label="收起案件侧栏">收起 ‹</button>
-      <div class="brand"><span class="brand-mark">⌕</span> Caseboard</div>
+      <div class="brand-row">
+        <div class="brand"><span class="brand-mark">⌕</span> Caseboard</div>
+        <button class="btn gear-btn" id="openSettings" aria-haspopup="dialog" aria-controls="settingsPanel" aria-expanded="false" title="系统设置" aria-label="打开系统设置">⚙</button>
+      </div>
       <div class="case-name">
         <small>当前案件</small>
         <strong id="caseTitle">关于“AI 与人的位置”</strong>
@@ -30,26 +33,6 @@
           <div><i class="dot question"></i>待问问题</div>
           <div><i class="dot" style="background:#5a9f78"></i>链接</div>
         </div>
-      </section>
-      <section>
-        <p class="section-title">设置</p>
-        <label class="style-row">字体
-          <select id="fontPreset" aria-label="界面字体">
-            <option value="instrument">精致 · Instrument</option>
-            <option value="classic">经典 · 系统</option>
-            <option value="news">报纸 · 衬线</option>
-            <option value="rounded">圆润 · 圆角</option>
-          </select>
-        </label>
-        <label class="style-row">板面颜色 <input type="color" id="boardColor" value="#6a4a32"></label>
-        <label class="style-row">连线颜色</label>
-        <div class="swatches" id="lineColorSwatches" role="group" aria-label="连线默认颜色"></div>
-        <label class="style-row range-row">连线粗细
-          <span style="display:flex;align-items:center;gap:6px">
-            <input type="range" id="lineWidth" min="1" max="10" value="2">
-            <output id="lineWidthVal">2</output>
-          </span>
-        </label>
       </section>
       <div class="side-foot">
         画布上粘贴网址可加入链接剪报；粘贴其他文字可新建板子。<br>
@@ -93,6 +76,34 @@
 
   <div class="toast" id="toast" role="status"></div>
   <div id="storageError" role="alert" hidden></div>
+
+  <div class="settings-root" id="settingsRoot" hidden>
+    <div class="settings-backdrop" id="settingsBackdrop"></div>
+    <div class="settings-panel" id="settingsPanel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" tabindex="-1">
+      <header class="settings-head">
+        <h2 id="settingsTitle">系统设置</h2>
+        <button class="btn" id="closeSettings" aria-label="关闭设置">关闭</button>
+      </header>
+      <p class="settings-note">这些是 Caseboard 的全局外观配置，对所有板子生效。</p>
+      <label class="style-row">字体
+        <select id="fontPreset" aria-label="界面字体">
+          <option value="instrument">精致 · Instrument</option>
+          <option value="classic">经典 · 系统</option>
+          <option value="news">报纸 · 衬线</option>
+          <option value="rounded">圆润 · 圆角</option>
+        </select>
+      </label>
+      <label class="style-row">板面颜色 <input type="color" id="boardColor" value="#6a4a32"></label>
+      <label class="style-row">连线颜色</label>
+      <div class="swatches" id="lineColorSwatches" role="group" aria-label="连线默认颜色"></div>
+      <label class="style-row range-row">连线粗细
+        <span style="display:flex;align-items:center;gap:6px">
+          <input type="range" id="lineWidth" min="1" max="10" value="2">
+          <output id="lineWidthVal">2</output>
+        </span>
+      </label>
+    </div>
+  </div>
 
   <script src="board-store.js"></script>
   <script src="app.js"></script>

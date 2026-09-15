@@ -287,6 +287,26 @@ function addLinkCard(url=''){
 }
 function add(){let r=boardWrap.getBoundingClientRect(),c={id:crypto.randomUUID(),cardScale:'观察 / 证据',kind:'线索',title:'新线索',note:'它让我想到什么？证据是什么？',x:(r.width/2-camera.x)/scale-71,y:(r.height/2-camera.y)/scale-38,tilt:'0deg'};state.cards.push(c);selected=c.id;render();openInspector();document.querySelector('#ftitle').focus();document.querySelector('#ftitle').select()}
 function toastMsg(m){toast.textContent=m;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
+const settingsRoot=document.querySelector('#settingsRoot');
+const openSettingsBtn=document.querySelector('#openSettings');
+const closeSettingsBtn=document.querySelector('#closeSettings');
+function openSettings(){
+  settingsRoot.hidden=false;
+  openSettingsBtn.setAttribute('aria-expanded','true');
+  document.querySelector('#settingsPanel').focus({preventScroll:true});
+  refreshLineColorSwatches();
+  applyStyle();applyFont();
+}
+function closeSettings(){
+  if(settingsRoot.hidden)return;
+  settingsRoot.hidden=true;
+  openSettingsBtn.setAttribute('aria-expanded','false');
+  openSettingsBtn.focus({preventScroll:true});
+}
+openSettingsBtn.onclick=()=>{settingsRoot.hidden?openSettings():closeSettings()};
+closeSettingsBtn.onclick=closeSettings;
+document.querySelector('#settingsBackdrop').onclick=closeSettings;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!settingsRoot.hidden){e.preventDefault();closeSettings()}});
 document.querySelector('#addLinkBtn').onclick=()=>addLinkCard();
 document.querySelector('#addBtn').onclick=add;document.querySelector('#linkBtn').onclick=()=>{if(linking){clearLinkMode();toastMsg('已退出连线模式。');return}enterLinkMode(selected)};document.querySelector('#zoomIn').onclick=()=>setZoom(Math.min(1.8,+(scale+.1).toFixed(2)));document.querySelector('#zoomOut').onclick=()=>setZoom(Math.max(.35,+(scale-.1).toFixed(2)));document.querySelector('#boardColor').oninput=e=>{state.boardColor=e.target.value;applyStyle();save()};document.querySelector('#lineWidth').oninput=e=>{state.lineWidth=+e.target.value;document.querySelector('#lineWidthVal').textContent=state.lineWidth;drawLinks();save()};document.querySelector('#fontPreset').onchange=e=>{workspace.settings.font=e.target.value;applyFont();save();toastMsg('字体已更新。')};boardWrap.addEventListener('pointerdown',startPan);applyFont();render();
 
