@@ -10,8 +10,11 @@ Caseboard 是一个**零依赖、零构建**的中文静态网页应用：把线
 
 ```text
 dist/
-  index.html      # 全部页面结构 + 内联 CSS + 全部交互 JavaScript（应用主体）
+  index.html      # 页面结构（链入样式与脚本）
+  styles.css      # 全部样式：布局、软木板主题、卡片、详情动画
+  app.js          # 全部交互逻辑：画布、卡片、连线、设置、链接剪报
   board-store.js  # 多板子存储与旧数据迁移（同时被浏览器和测试引用）
+  favicon.svg     # 站点图标
 tests/
   board-store.test.cjs  # node:test 单元测试
 .github/workflows/
@@ -22,7 +25,7 @@ AGENTS.md         # 本文件
 ```
 
 - `dist/` 虽然叫 dist，但**不是构建产物**：它就是源代码，直接编辑即可。没有打包、转译或 npm 依赖。
-- 应用逻辑几乎全在 `dist/index.html` 的 `<script>` 里；请直接编辑该文件。
+- 改样式编辑 `styles.css`；改交互编辑 `app.js`；改 DOM 骨架编辑 `index.html`；改持久化编辑 `board-store.js`。
 
 ## 本地运行与验证
 
@@ -71,7 +74,7 @@ node --test tests/board-store.test.cjs
   - `color`：该条连线颜色；缺省回退 `state.lineColor`。预设见 `LINK_COLORS`（红/金/蓝/紫/绿/橙/米/灰）。
   - **向后兼容**：旧数据里连线是 `['fromId','toId']` 数组。`normalizeLinks(state)` 会在加载和切板时把数组升级为 `{from,to,marker:'arrow'}` 对象。新增连线使用 `marker:'none'`。
 
-## 代码地图（`dist/index.html` 内主要函数）
+## 代码地图（`dist/app.js` 内主要函数）
 
 - `CaseboardStore.load / save`（在 `board-store.js`）：读写 workspace，做版本校验与旧数据迁移。
 - `normalizeLinks(state)`：把连线数组升级为对象。
