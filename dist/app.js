@@ -249,7 +249,7 @@ function openInspector(){
     `<div class="field"><label>封面 / 预览图（可选）</label><input id="fpreview" type="url" placeholder="自备截图或封面图 URL，覆盖自动预览" value="${esc(c.preview||'')}" /></div>`+
     `<p class="hint">${c.preview?'当前用自备封面图。':'填写网址后会尝试自动截图；失败则显示站点图标。'}也可粘贴自备图覆盖。纯前端无法保证所有网站都能截到。</p>`+
     `<div class="field"><label>批注</label><textarea id="fnote" placeholder="这则链接和当前推理有什么关系？">${esc(c.note||'')}</textarea></div>`+
-    `<div class="actions"><button class="btn primary" id="saveCard">保存</button>${c.url?`<a class="btn" id="openUrl" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">打开网页</a>`:''}<button class="btn" id="makeLink">从这里连线</button><button class="btn" id="delCard">删除</button></div>`;
+    `<div class="actions"><button class="btn success" id="saveCard">保存</button>${c.url?`<a class="btn" id="openUrl" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">打开网页</a>`:''}<button class="btn" id="makeLink">从这里连线</button><button class="btn" id="delCard">删除</button></div>`;
   animInspectorContent();
   document.querySelector('#saveCard').onclick=()=>{
     c.cardScale=document.querySelector('#fscale').value;c.kind=document.querySelector('#fkind').value;
