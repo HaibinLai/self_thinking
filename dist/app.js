@@ -87,7 +87,7 @@ function tryParseUrl(text){
 }
 function hostOf(url){try{return new URL(url).hostname.replace(/^www\./,'')}catch{return ''}}
 function faviconOf(url){const h=hostOf(url);return h?`https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=128`:''}
-function shotOf(url){return `https://image.thum.io/get/width/480/crop/270/noanimate/${url}`}
+function shotOf(url){return `https://mini.s-shot.ru/1024x768/JPEG/480/Z100/?${encodeURIComponent(url)}`}
 function isLinkCard(c){return !!(c&&(c.url||c.kind==='链接'))}
 function linkShotErr(img){
   const wrap=img&&img.closest&&img.closest('.link-shot-wrap');

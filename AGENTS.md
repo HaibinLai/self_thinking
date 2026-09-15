@@ -67,7 +67,7 @@ node --test tests/board-store.test.cjs
 ```
 
 - **卡片 `cardScale`（思想尺度）**：`世界问题` / `研究判断` / `机制 / 局部问题` / `观察 / 证据`，映射到 CSS 类 `world` / `research` / `mechanism` / `evidence`，决定卡片尺寸与底色。缩放 < 40%（`LOD_WORLD`）时进入分层 LOD：`世界问题` 保持完整卡片，其余（含链接剪报）加 `bubble` 类，显示为 `--type` 色点；舞台带 `lod-world`。放大后恢复。
-- **链接剪报**：`kind: '链接'` 或存在 `url` 时使用 CSS 类 `link`。字段：`url`（http/https）、可选 `preview`（自备封面图）、`note`（批注）。卡片面由 `cardFaceHtml` 渲染：优先 `preview`，否则 `thum.io` 页面缩略图，失败回退 Google favicon。粘贴单个网址或点「＋ 链接」调用 `addLinkCard`。
+- **链接剪报**：`kind: '链接'` 或存在 `url` 时使用 CSS 类 `link`。字段：`url`（http/https）、可选 `preview`（自备封面图）、`note`（批注）。卡片面由 `cardFaceHtml` 渲染：16:9 预览区 + 域名 chip；优先 `preview`，否则 `mini.s-shot.ru` 页面缩略图，失败回退 Google favicon，再失败或无网址显示占位文案。粘贴单个网址或点「＋ 链接」调用 `addLinkCard`。
 - **连线 `links`**：每条是对象 `{from, to, marker, width, color}`。
   - `marker`：`none`（默认新建）/ `arrow` / `dot` / `diamond` / `bar`。
   - `width`：该条连线粗细（px）；缺省回退 `state.lineWidth`。
