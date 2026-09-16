@@ -487,7 +487,7 @@ function openInspector(){
     if(c.url!==prevUrl||c.preview!==prevPreview)delete c.previewCache;
     if(c.url&&c.kind!=='链接'&&!['来源','线索'].includes(c.kind))c.kind='链接';
     if(c.url&&(!c.title||c.title==='无标题'))c.title=hostOf(c.url)||'网页链接';
-    render();openInspector();toastMsg('已保存。');
+    render();dismissClip();toastMsg('已保存。');
   };
   const refreshBtn=document.querySelector('#refreshPreview');
   if(refreshBtn)refreshBtn.onclick=()=>{
