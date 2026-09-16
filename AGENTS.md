@@ -68,7 +68,7 @@ node --test tests/board-store.test.cjs
 
 - **卡片 `cardScale`（思想尺度）**：`世界问题` / `研究判断` / `机制 / 局部问题` / `观察 / 证据`，映射到 CSS 类 `world` / `research` / `mechanism` / `evidence`，决定卡片尺寸与底色。缩放 < 40%（`LOD_WORLD`）时进入分层 LOD：`世界问题` 或 `keepVisible: true` 保持完整卡片，其余（含链接剪报）加 `bubble` 类，显示为 `--type` 色点；舞台带 `lod-world`。放大后恢复。`keepVisible` 默认 `false`；详情剪报里可勾选「缩小时保持完整」（世界问题勾选且禁用）。
 - **卡片叠放 `z`**：整数层级，越大越靠上。缺省时 `ensureCardLayers` 按现有顺序补齐。详情面板有「置底 / 下移 / 上移 / 置顶」；拖动卡片时会静默置顶。连线 SVG `.strings` 固定 `z-index:10000`，始终画在卡片之上。
-- **链接剪报**：`kind: '链接'` 或存在 `url` 时使用 CSS 类 `link`。字段：`url`（http/https）、可选 `preview`（自备封面图）、可选 `previewCache`（成功截图的压缩 data URL，存在 localStorage）、`note`（批注）。卡片面由 `cardFaceHtml` / `previewPick` 渲染：优先 `preview` → `previewCache` → `mini.s-shot.ru` 实时缩略图 → Google favicon。实时图 `onload` 后经 CORS `fetch` 校验（非 2xx / 超时占位图不缓存），再压成 JPEG（边长 ≤720、质量 ~0.7）写入 `previewCache`；之后即使截图服务返回 timeout 也继续显示缓存。详情面板有「刷新预览」可清缓存重抓。粘贴单个网址或点「＋ 链接」调用 `addLinkCard`。
+- **链接剪报**：`kind: '链接'` 或存在 `url` 时使用 CSS 类 `link`。字段：`url`（http/https）、可选 `preview`（自备封面图）、可选 `previewCache`（成功截图的压缩 data URL，存在 localStorage）、`note`（批注）。卡片面由 `cardFaceHtml` / `previewPick` 渲染：优先 `preview` → 若 `url` 为图片扩展名（png/jpg/gif/webp/…）则直接显示原图 → `previewCache` → `mini.s-shot.ru` 实时缩略图 → Google favicon。实时图 `onload` 后经 CORS `fetch` 校验（非 2xx / 超时占位图不缓存），再压成 JPEG（边长 ≤720、质量 ~0.7）写入 `previewCache`；之后即使截图服务返回 timeout 也继续显示缓存。详情面板有「刷新预览」可清缓存重抓。粘贴单个网址或点「＋ 链接」调用 `addLinkCard`。
 - **连线 `links`**：每条是对象 `{from, to, marker, width, color}`。
   - `marker`：`none`（默认新建）/ `arrow` / `dot` / `diamond` / `bar`。
   - `width`：该条连线粗细（px）；缺省回退 `state.lineWidth`。

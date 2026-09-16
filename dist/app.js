@@ -197,10 +197,23 @@ function tryParseUrl(text){
 function hostOf(url){try{return new URL(url).hostname.replace(/^www\./,'')}catch{return ''}}
 function faviconOf(url){const h=hostOf(url);return h?`https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=128`:''}
 function shotOf(url){return `https://mini.s-shot.ru/1024x768/JPEG/480/Z100/?${encodeURIComponent(url)}`}
+function isImageUrl(url){
+  try{
+    const path=decodeURIComponent(new URL(url).pathname).toLowerCase();
+    return /\.(png|jpe?g|gif|webp|avif|bmp|svg)$/i.test(path);
+  }catch{return false}
+}
+function imageFileName(url){
+  try{
+    const name=decodeURIComponent(new URL(url).pathname.split('/').filter(Boolean).pop()||'');
+    return name||'图片';
+  }catch{return '图片'}
+}
 function isLinkCard(c){return !!(c&&(c.url||c.kind==='链接'))}
 const PREVIEW_MAX_DIM=720,PREVIEW_JPEG_Q=.7,PREVIEW_MAX_CHARS=180000;
 function previewPick(c){
   if(c.preview)return {src:c.preview,stage:'user'};
+  if(c.url&&isImageUrl(c.url))return {src:c.url,stage:'image'};
   if(c.previewCache)return {src:c.previewCache,stage:'cache'};
   if(c.url)return {src:shotOf(c.url),stage:'live'};
   return {src:'',stage:'none'};
@@ -283,7 +296,7 @@ function linkShotLoad(img){
   if(stage==='fav'||stage==='cache')return;
   const card=cardFromShotImg(img);if(!card)return;
   if(stage==='live'){verifyAndCacheLive(card,img);return}
-  if(stage==='user'){
+  if(stage==='image'||stage==='user'){
     try{persistPreviewCache(card,imgToPreviewCache(img))}catch(_){}
   }
 }
@@ -322,19 +335,22 @@ function linkShotErr(img){
 function cardFaceHtml(c){
   if(!isLinkCard(c))return `<div class="kind">${esc(c.cardScale)} · ${esc(c.kind)}</div><div class="title">${esc(c.title||'无标题')}</div><div class="excerpt">${esc(c.note||'')}</div>`;
   const url=c.url||'',host=hostOf(url),fav=faviconOf(url),pick=previewPick(c);
-  const hostLabel=host||'未填写网址',title=c.title||host||'网页链接',note=c.note||'';
+  const directImg=pick.stage==='image'||(pick.stage==='cache'&&isImageUrl(url))||(pick.stage==='user'&&isImageUrl(c.preview||url));
+  const hostLabel=host||'未填写网址',title=c.title||(isImageUrl(url)?imageFileName(url):host)||'网页链接',note=c.note||'';
   const kindExtra=c.kind&&c.kind!=='链接'?` · ${esc(c.kind)}`:'';
+  const kindLabel=isImageUrl(url)?'图片剪报':'链接剪报';
   const chip=`<div class="link-chip">${fav?`<img src="${esc(fav)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"/>`:''}<span>${esc(hostLabel)}</span></div>`;
   let media;
   if(pick.src){
-    const cors=pick.src.startsWith('data:')?'':' crossorigin="anonymous"';
-    media=`<div class="link-shot-wrap" data-state="loading"><img class="link-shot" src="${esc(pick.src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${cors} data-stage="${esc(pick.stage)}" data-fav="${esc(fav)}" onerror="linkShotErr(this)" onload="linkShotLoad(this)"/>${chip}</div>`;
+    const needsCors=pick.stage==='live'&&!pick.src.startsWith('data:');
+    const cors=needsCors?' crossorigin="anonymous"':'';
+    media=`<div class="link-shot-wrap" data-state="loading"${directImg||pick.stage==='image'?' data-kind="image"':''}><img class="link-shot" src="${esc(pick.src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${cors} data-stage="${esc(pick.stage)}" data-fav="${esc(fav)}" onerror="linkShotErr(this)" onload="linkShotLoad(this)"/>${chip}</div>`;
   }else if(fav){
     media=`<div class="link-shot-wrap" data-state="icon"><img class="link-shot fallback" src="${esc(fav)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-stage="fav" onerror="linkShotErr(this)"/>${chip}</div>`;
   }else{
     media=`<div class="link-shot-wrap" data-state="empty"><div class="link-shot-ph"><span>粘贴网址以显示预览</span></div>${chip}</div>`;
   }
-  return `${media}<div class="link-body"><div class="kind">链接剪报${kindExtra}</div><div class="title">${esc(title)}</div><div class="excerpt${note?'':' is-ph'}">${esc(note||'写一句批注…')}</div></div>`;
+  return `${media}<div class="link-body"><div class="kind">${kindLabel}${kindExtra}</div><div class="title">${esc(title)}</div><div class="excerpt${note?'':' is-ph'}">${esc(note||'写一句批注…')}</div></div>`;
 }
 function markerDefs(color,prefix='mk'){return (
   `<marker id="${prefix}-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="${color}"/></marker>`+
@@ -534,7 +550,8 @@ function flushCardForm(){
   if(keepEl&&!keepEl.disabled)c.keepVisible=!!keepEl.checked;
   if(c.url!==prevUrl||c.preview!==prevPreview)delete c.previewCache;
   if(c.url&&c.kind!=='链接'&&!['来源','线索'].includes(c.kind))c.kind='链接';
-  if(c.url&&(!c.title||c.title==='无标题'))c.title=hostOf(c.url)||'网页链接';
+  if(c.url&&(!c.title||c.title==='无标题'))c.title=isImageUrl(c.url)?imageFileName(c.url):(hostOf(c.url)||'网页链接');
+  else if(c.url&&c.url!==prevUrl&&c.title===hostOf(prevUrl||''))c.title=isImageUrl(c.url)?imageFileName(c.url):(hostOf(c.url)||'网页链接');
   return c;
 }
 function pasteCardPayload(data){
@@ -547,13 +564,13 @@ function pasteCardPayload(data){
 function openInspector(){
   let c=state.cards.find(x=>x.id===selected);if(!c||!clipContent)return;
   const kinds=['线索','链接','来源','观察','推断','问题','下一步'];
-  const heading=isLinkCard(c)?'链接剪报':'线索详情';
-  const cacheHint=c.previewCache?'已缓存本地预览。':'截图成功后会压缩缓存到本机。';
+  const heading=isLinkCard(c)?(isImageUrl(c.url)?'图片剪报':'链接剪报'):'线索详情';
+  const cacheHint=c.previewCache?'已缓存本地预览。':(isImageUrl(c.url)?'图片链接会直接显示原图。':'截图成功后会压缩缓存到本机。');
   const worldLocked=isWorldCard(c);
   const pick=previewPick(c);
   const fav=faviconOf(c.url||'');
   const previewHtml=c.url||c.preview||c.previewCache
-    ?`<div class="clip-preview">${pick.src
+    ?`<div class="clip-preview${pick.stage==='image'||isImageUrl(c.url)?' is-image':''}">${pick.src
       ?`<img src="${esc(pick.src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${pick.stage==='live'?' crossorigin="anonymous"':''} data-stage="${esc(pick.stage)}" data-fav="${esc(fav)}" onerror="this.classList.add('is-fallback');this.src=this.dataset.fav||'';this.onerror=null" />`
       :`<div class="clip-preview-empty">暂无预览</div>`}</div>`
     :'';
@@ -570,7 +587,7 @@ function openInspector(){
     `<div class="field"><label>标题</label><input id="ftitle" value="${esc(c.title||'')}" /></div>`+
     `<div class="field"><label>网址</label><input id="furl" type="url" placeholder="https://example.com/…" value="${esc(c.url||'')}" /></div>`+
     `<div class="field"><label>封面 / 预览图（可选）</label><input id="fpreview" type="url" placeholder="自备封面图 URL，覆盖自动预览" value="${esc(c.preview||'')}" /></div>`+
-    `<p class="hint">${c.preview?'当前用自备封面。':'填网址后自动截图；失败则显示站点图标。'}${cacheHint}</p>`+
+    `<p class="hint">${c.preview?'当前用自备封面。':(isImageUrl(c.url)?'检测到图片链接，将直接显示原图。':'填网址后自动截图；失败则显示站点图标。')}${cacheHint}</p>`+
     `</div>`+
     `<div class="clip-col clip-col-note">`+
     `<div class="field field-note"><label>批注</label><textarea id="fnote" placeholder="这则剪报和当前推理有什么关系？">${esc(c.note||'')}</textarea></div>`+
@@ -894,10 +911,11 @@ function addLinkCard(url=''){
   saveDraft();
   const r=boardWrap.getBoundingClientRect(),parsed=tryParseUrl(url)||'';
   const host=hostOf(parsed)||'网页链接';
-  const c={id:crypto.randomUUID(),cardScale:'观察 / 证据',kind:'链接',title:host,url:parsed,preview:'',note:'',x:(r.width/2-camera.x)/scale-110,y:(r.height/2-camera.y)/scale-105,tilt:(Math.random()>.5?'-1.2deg':'1.2deg'),z:nextCardZ(state)};
+  const title=parsed&&isImageUrl(parsed)?imageFileName(parsed):host;
+  const c={id:crypto.randomUUID(),cardScale:'观察 / 证据',kind:'链接',title,url:parsed,preview:'',note:'',x:(r.width/2-camera.x)/scale-110,y:(r.height/2-camera.y)/scale-105,tilt:(Math.random()>.5?'-1.2deg':'1.2deg'),z:nextCardZ(state)};
   state.cards.push(c);selected=c.id;render();openInspector();
   const fu=document.querySelector('#furl');if(fu){fu.focus();fu.select()}
-  toastMsg(parsed?'已钉上一张链接剪报。':'填写网址，保存后会显示预览。');
+  toastMsg(parsed?(isImageUrl(parsed)?'已钉上图片剪报。':'已钉上一张链接剪报。'):'填写网址，保存后会显示预览。');
 }
 function add(){let r=boardWrap.getBoundingClientRect(),c={id:crypto.randomUUID(),cardScale:'观察 / 证据',kind:'线索',title:'新线索',note:'它让我想到什么？证据是什么？',x:(r.width/2-camera.x)/scale-71,y:(r.height/2-camera.y)/scale-38,tilt:'0deg',z:nextCardZ(state)};state.cards.push(c);selected=c.id;render();openInspector();document.querySelector('#ftitle').focus();document.querySelector('#ftitle').select()}
 function toastMsg(m){toast.textContent=m;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
