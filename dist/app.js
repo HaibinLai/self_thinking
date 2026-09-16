@@ -85,7 +85,10 @@ if(settingsBackdrop)settingsBackdrop.addEventListener('click',e=>{
 if(settingsPanel)settingsPanel.addEventListener('click',e=>e.stopPropagation());
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
-  if(isBoardPickerOpen()){e.preventDefault();setBoardPickerOpen(false);boardPickerBtn?.focus();return}
+  if(isBoardPickerOpen()){
+    if(boardPickerList?.querySelector('.board-picker-edit'))return;
+    e.preventDefault();setBoardPickerOpen(false);boardPickerBtn?.focus();return
+  }
   if(isSettingsOpen()){e.preventDefault();closeSettings(e);return}
   if(isClipOpen()||selected!=null||selectedLink!=null||linking){e.preventDefault();dismissClip()}
 });
@@ -620,20 +623,75 @@ function updateBoardSelect(){
     item.setAttribute('role','option');
     item.setAttribute('aria-selected',String(b.id===workspace.activeId));
     item.dataset.id=b.id;
-    item.innerHTML=`<span class="board-picker-index">${i+1}</span><span class="board-picker-title">${esc(b.data.caseTitle||'未命名板子')}</span>${b.id===workspace.activeId?'<span class="board-picker-check" aria-hidden="true">✓</span>':''}`;
+    const boardName=b.data.caseTitle||'未命名板子';
+    item.innerHTML=`<span class="board-picker-index">${i+1}</span><span class="board-picker-title">${esc(boardName)}</span>${b.id===workspace.activeId?'<span class="board-picker-check" aria-hidden="true">✓</span>':''}`;
     item.onclick=()=>{if(b.id!==workspace.activeId){saveDraft();activateBoard(b.id)}setBoardPickerOpen(false)};
+    const ren=document.createElement('button');
+    ren.type='button';
+    ren.className='board-picker-rename';
+    ren.dataset.id=b.id;
+    ren.textContent='重命名';
+    ren.title='重命名这块板子';
+    ren.setAttribute('aria-label',`重命名板子「${boardName}」`);
+    ren.onclick=e=>{e.stopPropagation();startBoardRename(b.id,row)};
     const del=document.createElement('button');
     del.type='button';
     del.className='board-picker-del';
     del.dataset.id=b.id;
     del.textContent='删除';
     del.title=onlyOne?'至少保留一块板子':'删除这块板子';
-    del.setAttribute('aria-label',`删除板子「${b.data.caseTitle||'未命名板子'}」`);
+    del.setAttribute('aria-label',`删除板子「${boardName}」`);
     del.disabled=onlyOne;
     del.onclick=e=>{e.stopPropagation();deleteBoard(b.id)};
-    row.append(item,del);
+    row.append(item,ren,del);
     boardPickerList.appendChild(row);
   });
+}
+function startBoardRename(id,row){
+  const entry=workspace.boards.find(b=>b.id===id);if(!entry)return;
+  const editing=boardPickerList?.querySelector('.board-picker-row.is-editing .board-picker-edit');
+  if(editing){
+    editing.blur();
+    row=boardPickerList?.querySelector(`.board-picker-item[data-id="${CSS.escape(id)}"]`)?.closest('.board-picker-row');
+  }
+  if(!row||row.classList.contains('is-editing'))return;
+  row.classList.add('is-editing');
+  const item=row.querySelector('.board-picker-item');
+  const titleEl=row.querySelector('.board-picker-title');
+  const check=row.querySelector('.board-picker-check');
+  const ren=row.querySelector('.board-picker-rename');
+  const del=row.querySelector('.board-picker-del');
+  if(!item||!titleEl){row.classList.remove('is-editing');return}
+  if(ren)ren.hidden=true;if(del)del.hidden=true;if(check)check.remove();
+  const input=document.createElement('input');
+  input.type='text';
+  input.className='board-picker-edit';
+  input.value=entry.data.caseTitle||'';
+  input.placeholder='未命名板子';
+  input.setAttribute('aria-label','编辑板子名称');
+  input.maxLength=80;
+  titleEl.replaceWith(input);
+  item.onclick=e=>{e.preventDefault();e.stopPropagation()};
+  let done=false;
+  const finish=commit=>{
+    if(done)return;done=true;
+    if(commit){
+      const title=input.value.trim()||'未命名板子';
+      entry.data.caseTitle=title;
+      save();
+      toastMsg(`已重命名为「${title}」。`);
+    }
+    updateBoardSelect();
+  };
+  input.addEventListener('keydown',e=>{
+    e.stopPropagation();
+    if(e.key==='Enter'){e.preventDefault();finish(true)}
+    else if(e.key==='Escape'){e.preventDefault();finish(false)}
+  });
+  input.addEventListener('click',e=>e.stopPropagation());
+  input.addEventListener('pointerdown',e=>e.stopPropagation());
+  input.addEventListener('blur',()=>finish(true));
+  queueMicrotask(()=>{input.focus();input.select()});
 }
 function deleteBoard(id){
   if(workspace.boards.length<=1){toastMsg('至少保留一块板子。');updateBoardSelect();return}

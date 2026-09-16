@@ -42,10 +42,11 @@
     }
     .board-picker-list{display:grid;gap:4px;max-height:min(42vh,280px);overflow:auto;padding:0 2px 4px}
     .board-picker-row{
-      display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px;
+      display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:4px;
       border-radius:8px;padding:2px
     }
     .board-picker-row.is-active{background:rgba(229,181,92,.12)}
+    .board-picker-row.is-editing{grid-template-columns:minmax(0,1fr)}
     .board-picker-item{
       display:flex;align-items:center;gap:10px;min-width:0;width:100%;
       border:0;background:transparent;color:#e8dcc8;font:inherit;text-align:left;
@@ -53,6 +54,8 @@
     }
     .board-picker-item:hover{background:rgba(255,255,255,.06)}
     .board-picker-item:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+    .board-picker-row.is-editing .board-picker-item{cursor:default}
+    .board-picker-row.is-editing .board-picker-item:hover{background:transparent}
     .board-picker-index{
       flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
       font-size:11px;font-weight:700;color:#241c16;background:var(--gold)
@@ -60,10 +63,17 @@
     .board-picker-row:not(.is-active) .board-picker-index{background:#3a2c20;color:#d9cbb4}
     .board-picker-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
     .board-picker-check{flex:none;color:var(--gold);font-size:12px;font-weight:700}
-    .board-picker-del{
+    .board-picker-edit{
+      flex:1;min-width:0;width:100%;box-sizing:border-box;
+      border:1px solid #8a7058;border-radius:6px;background:#241c16;color:#f3ead7;
+      font:inherit;font-size:14px;padding:4px 8px;outline:none
+    }
+    .board-picker-edit:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(229,181,92,.25)}
+    .board-picker-rename,.board-picker-del{
       flex:none;border:1px solid transparent;background:transparent;color:#a89880;
       border-radius:7px;padding:6px 8px;font:inherit;font-size:12px;cursor:pointer
     }
+    .board-picker-rename:hover{color:#f3ead7;border-color:#5a4634;background:rgba(255,255,255,.06)}
     .board-picker-del:hover:not(:disabled){color:#ffb0a8;border-color:#6a3a32;background:rgba(180,50,40,.15)}
     .board-picker-del:disabled{opacity:.35;cursor:not-allowed}
     .board-picker-foot{padding:6px 2px 2px;border-top:1px solid #3a2c20;margin-top:4px}
