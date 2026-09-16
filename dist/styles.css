@@ -299,7 +299,10 @@
     }
     .pin:hover{transform:translateX(-50%) scale(1.14)}
     .hint{font-size:12px;color:#8a7a66;line-height:1.45;margin:0}
-    /* 缩放 < 40%：非「世界问题」卡片收成色点；世界问题保持完整卡片 */
+    .field.check label{display:flex;align-items:flex-start;gap:8px;cursor:pointer;color:#5a4a38;line-height:1.4}
+    .field.check input[type=checkbox]{width:auto;margin:.15em 0 0;flex:none;accent-color:var(--red)}
+    .field.check input[type=checkbox]:disabled{cursor:default;opacity:.85}
+    /* 缩放 < 40%：默认非「世界问题」收成色点；世界问题或 keepVisible 保持完整卡片 */
     .card.bubble{
       min-height:14px!important;width:14px!important;height:14px!important;padding:0;border-radius:50%;
       background:var(--type)!important;filter:none!important;overflow:hidden;border:none!important;

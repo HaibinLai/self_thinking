@@ -303,7 +303,7 @@ function scheduleSave(ms=320){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{
 function saveNow(){clearTimeout(saveTimer);saveTimer=0;save()}
 const LOD_WORLD=.4,BUBBLE_SIZE=[14,14];
 function isWorldCard(c){return !!(c&&!isLinkCard(c)&&c.cardScale==='世界问题')}
-function shouldBubble(c){return scale<LOD_WORLD&&!isWorldCard(c)}
+function shouldBubble(c){return scale<LOD_WORLD&&!isWorldCard(c)&&!c?.keepVisible}
 function cardSizeKey(c){return isLinkCard(c)?'link':(scaleClass[c.cardScale]||'mechanism')}
 function fallbackCardSize(c){return shouldBubble(c)?BUBBLE_SIZE:cardDimensions[cardSizeKey(c)]}
 function applyCardLod(){
@@ -432,8 +432,11 @@ function openInspector(){
   const kinds=['线索','链接','来源','观察','推断','问题','下一步'];
   const heading=isLinkCard(c)?'链接剪报':'线索详情';
   const cacheHint=c.previewCache?'已缓存本地预览。':'成功加载的截图会压缩缓存到本机，之后即使截图服务超时也会继续显示。';
+  const worldLocked=isWorldCard(c);
   clipContent.innerHTML=`<p class="clip-kicker">Caseboard · 剪报</p><h2 id="clipHeading">${heading}</h2>${linking?'<div class="connection-help">连线模式已开启：点另一张卡片即可自动建立关系。</div>':''}`+
     `<div class="field"><label>思想尺度</label><select id="fscale">${['世界问题','研究判断','机制 / 局部问题','观察 / 证据'].map(x=>`<option ${x===c.cardScale?'selected':''}>${x}</option>`).join('')}</select></div>`+
+    `<div class="field check"><label><input type="checkbox" id="fkeepVisible" ${c.keepVisible||worldLocked?'checked':''} ${worldLocked?'disabled':''} /> 缩小时保持完整</label></div>`+
+    `<p class="hint">${worldLocked?'「世界问题」缩小时始终保持完整卡片。':'缩小到约 40% 以下时，勾选后仍显示完整卡片，不收成色点。'}</p>`+
     `<div class="field"><label>类型</label><select id="fkind">${kinds.map(x=>`<option ${x===c.kind?'selected':''}>${x}</option>`).join('')}</select></div>`+
     `<div class="field"><label>标题</label><input id="ftitle" value="${esc(c.title||'')}" /></div>`+
     `<div class="field"><label>网址</label><input id="furl" type="url" placeholder="https://example.com/…" value="${esc(c.url||'')}" /></div>`+
@@ -442,6 +445,15 @@ function openInspector(){
     `<div class="field"><label>批注</label><textarea id="fnote" placeholder="这则链接和当前推理有什么关系？">${esc(c.note||'')}</textarea></div>`+
     `<div class="actions"><button class="btn success" id="saveCard">保存</button>${c.url?`<button class="btn" id="refreshPreview" type="button">刷新预览</button><a class="btn" id="openUrl" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">打开网页</a>`:''}<button class="btn" id="makeLink">从这里连线</button><button class="btn" id="delCard">删除</button></div>`;
   showClip();
+  const syncKeepVisibleUi=()=>{
+    const scaleVal=document.querySelector('#fscale')?.value;
+    const locked=!isLinkCard(c)&&scaleVal==='世界问题';
+    const el=document.querySelector('#fkeepVisible');
+    if(!el)return;
+    el.disabled=locked;
+    if(locked)el.checked=true;
+  };
+  document.querySelector('#fscale').onchange=syncKeepVisibleUi;
   document.querySelector('#saveCard').onclick=()=>{
     const prevUrl=c.url,prevPreview=c.preview;
     c.cardScale=document.querySelector('#fscale').value;c.kind=document.querySelector('#fkind').value;
@@ -451,6 +463,8 @@ function openInspector(){
     if(!c.url&&rawUrl)toastMsg('请填写以 http(s) 开头的有效网址。');
     c.preview=document.querySelector('#fpreview').value.trim();
     c.note=document.querySelector('#fnote').value.trim();
+    const keepEl=document.querySelector('#fkeepVisible');
+    if(keepEl&&!keepEl.disabled)c.keepVisible=!!keepEl.checked;
     if(c.url!==prevUrl||c.preview!==prevPreview)delete c.previewCache;
     if(c.url&&c.kind!=='链接'&&!['来源','线索'].includes(c.kind))c.kind='链接';
     if(c.url&&(!c.title||c.title==='无标题'))c.title=hostOf(c.url)||'网页链接';
@@ -599,9 +613,10 @@ function saveDraft(){
   const c=state.cards.find(c=>c.id===selected),title=document.querySelector('#ftitle');
   if(c&&title){
     c.title=title.value.trim()||'无标题';c.note=document.querySelector('#fnote').value;c.kind=document.querySelector('#fkind').value;c.cardScale=document.querySelector('#fscale').value;
-    const fu=document.querySelector('#furl'),fp=document.querySelector('#fpreview');
+    const fu=document.querySelector('#furl'),fp=document.querySelector('#fpreview'),fk=document.querySelector('#fkeepVisible');
     if(fu){const raw=fu.value.trim();c.url=tryParseUrl(raw)||raw}
     if(fp)c.preview=fp.value.trim();
+    if(fk&&!fk.disabled)c.keepVisible=!!fk.checked;
   }
   save();
 }
