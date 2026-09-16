@@ -185,8 +185,46 @@
         linear-gradient(180deg,rgba(255,255,255,.22),transparent 22%),
         repeating-linear-gradient(0deg,transparent,transparent 16px,rgba(90,70,30,.06) 17px),
         #f6ebc8;
-      box-shadow:1px 2px 0 rgba(0,0,0,.06),4px 10px 14px rgba(0,0,0,.24),10px 22px 32px rgba(0,0,0,.3),0 0 0 1px rgba(150,110,40,.28)
+      box-shadow:
+        1px 2px 0 rgba(0,0,0,.06),
+        4px 10px 14px rgba(0,0,0,.24),
+        10px 22px 32px rgba(0,0,0,.3),
+        0 0 0 1px rgba(150,110,40,.28),
+        0 0 0 2px rgba(229,83,75,.85);
+      outline:none;
+      border-radius:3px;
+      overflow:visible
     }
+    .card.world .world-ring{
+      position:absolute;z-index:3;pointer-events:none;
+      inset:-20px -26px;
+      border:2.75px solid var(--red2);
+      border-radius:50%;
+      box-shadow:
+        0 0 0 1px rgba(160,40,35,.22),
+        inset 0 0 0 1px rgba(229,83,75,.18);
+      transform:rotate(-1.5deg);
+      opacity:.95
+    }
+    .card.world.selected{
+      outline:none;
+      box-shadow:
+        1px 2px 0 rgba(0,0,0,.06),
+        3px 8px 10px rgba(0,0,0,.22),
+        0 0 0 2px rgba(229,83,75,.95),
+        0 0 0 6px rgba(229,83,75,.16)
+    }
+    .card.world.selected .world-ring{
+      border-color:#ff7168;
+      box-shadow:
+        0 0 0 1px rgba(160,40,35,.28),
+        inset 0 0 0 1px rgba(255,113,104,.22),
+        0 0 12px rgba(229,83,75,.25)
+    }
+    .card.world .title{font-size:19px;line-height:1.22}
+    .card.world .excerpt{font-size:13px}
+    .card.fit.world:not(.bubble){max-width:320px;min-width:268px}
+    .card.bubble .world-ring{display:none}
     .card.research{
       background:
         linear-gradient(180deg,rgba(255,255,255,.25),transparent 22%),

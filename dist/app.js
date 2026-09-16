@@ -95,12 +95,19 @@ document.addEventListener('keydown',e=>{
 const typeColor={线索:'#e5b55c',来源:'#77b7d5',观察:'#77b7d5',推断:'#c68bf1',问题:'#ff7168',下一步:'#ff7168',链接:'#5a9f78'};
 const scaleClass={'世界问题':'world','研究判断':'research','机制 / 局部问题':'mechanism','观察 / 证据':'evidence'};
 window.addEventListener('resize',()=>{drawLinks();if(typeof isClipOpen==='function'&&isClipOpen())positionClipNearSelection()});
-const cardDimensions={world:[286,154],research:[228,123],mechanism:[185,104],evidence:[142,76],link:[220,210]};
+const cardDimensions={world:[300,168],research:[228,123],mechanism:[185,104],evidence:[142,76],link:[220,210]};
 const CARD_FIT_MAX_CHARS=200,CARD_FIT_W=[128,286],CARD_FIT_MIN_H=[58,154];
+const CARD_FIT_WORLD_W=[268,320],CARD_FIT_WORLD_MIN_H=[148,180];
 function cardTextLen(c){return String(c?.title||'').length+String(c?.note||'').length}
 function fitCardStyle(c){
   if(isLinkCard(c))return {width:220,minHeight:0};
   const t=Math.min(1,cardTextLen(c)/CARD_FIT_MAX_CHARS);
+  if(isWorldCard(c)){
+    return {
+      width:Math.round(CARD_FIT_WORLD_W[0]+(CARD_FIT_WORLD_W[1]-CARD_FIT_WORLD_W[0])*t),
+      minHeight:Math.round(CARD_FIT_WORLD_MIN_H[0]+(CARD_FIT_WORLD_MIN_H[1]-CARD_FIT_WORLD_MIN_H[0])*t)
+    };
+  }
   return {
     width:Math.round(CARD_FIT_W[0]+(CARD_FIT_W[1]-CARD_FIT_W[0])*t),
     minHeight:Math.round(CARD_FIT_MIN_H[0]+(CARD_FIT_MIN_H[1]-CARD_FIT_MIN_H[0])*t)
@@ -399,7 +406,7 @@ function refreshLineColorSwatches(){
   lineSwatchesBound=true;
 }
 function markCards(){document.querySelectorAll('.card').forEach(e=>{e.classList.toggle('selected',e.dataset.id===selected);e.classList.toggle('target',e.dataset.id===linking)});boardWrap.classList.toggle('linking',!!linking);document.querySelector('#linkBtn').classList.toggle('active',!!linking)}
-function render(){board.querySelectorAll('.card').forEach(e=>e.remove());document.querySelector('#empty').hidden=state.cards.length>0;ensureCardLayers(state);[...state.cards].sort((a,b)=>cardZ(a)-cardZ(b)).forEach(c=>{let e=document.createElement('article');const link=isLinkCard(c);const fit=fitCardStyle(c);e.className=`card fit ${link?'link':(scaleClass[c.cardScale]||'mechanism')}`;e.dataset.id=c.id;e.style.cssText=`left:${c.x}px;top:${c.y}px;--tilt:${c.tilt||'0deg'};--type:${typeColor[c.kind]||(link?'#5a9f78':'#e5b55c')};width:${fit.width}px;min-height:${fit.minHeight||0}px;height:auto;z-index:${cardZ(c)}`;e.innerHTML=`<button class="pin" aria-label="从这张卡片连线" title="从这里连线"></button>${cardFaceHtml(c)}`;e.addEventListener('pointerdown',startDrag);e.addEventListener('click',clickCard);let pin=e.querySelector('.pin');pin.addEventListener('pointerdown',x=>x.stopPropagation());pin.addEventListener('click',x=>{x.stopPropagation();enterLinkMode(c.id)});board.appendChild(e)});markCards();applyStyle();drawLinks();scheduleSave()}
+function render(){board.querySelectorAll('.card').forEach(e=>e.remove());document.querySelector('#empty').hidden=state.cards.length>0;ensureCardLayers(state);[...state.cards].sort((a,b)=>cardZ(a)-cardZ(b)).forEach(c=>{let e=document.createElement('article');const link=isLinkCard(c);const world=isWorldCard(c);const fit=fitCardStyle(c);e.className=`card fit ${link?'link':(scaleClass[c.cardScale]||'mechanism')}`;e.dataset.id=c.id;e.style.cssText=`left:${c.x}px;top:${c.y}px;--tilt:${c.tilt||'0deg'};--type:${typeColor[c.kind]||(link?'#5a9f78':'#e5b55c')};width:${fit.width}px;min-height:${fit.minHeight||0}px;height:auto;z-index:${cardZ(c)}`;e.innerHTML=`<button class="pin" aria-label="从这张卡片连线" title="从这里连线"></button>${world?'<span class="world-ring" aria-hidden="true"></span>':''}${cardFaceHtml(c)}`;e.addEventListener('pointerdown',startDrag);e.addEventListener('click',clickCard);let pin=e.querySelector('.pin');pin.addEventListener('pointerdown',x=>x.stopPropagation());pin.addEventListener('click',x=>{x.stopPropagation();enterLinkMode(c.id)});board.appendChild(e)});markCards();applyStyle();drawLinks();scheduleSave()}
 let linksRaf=0;
 function requestDrawLinks(){if(linksRaf)return;linksRaf=requestAnimationFrame(()=>{linksRaf=0;drawLinks()})}
 function drawLinks(){
