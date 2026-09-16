@@ -334,8 +334,8 @@
     .clip-detail[hidden]{display:none!important}
     .clip-paper{
       pointer-events:auto;position:absolute;left:50%;top:50%;
-      width:min(440px,calc(100% - 28px));max-height:min(78vh,640px);
-      overflow:auto;padding:22px 22px 20px;color:#241c14;
+      width:min(720px,calc(100% - 28px));max-height:min(68vh,520px);
+      overflow:auto;overscroll-behavior:contain;padding:14px 16px 12px;color:#241c14;
       transform:translate(-50%,-50%) rotate(-.6deg);
       background:
         linear-gradient(180deg,rgba(255,255,255,.4),transparent 22%),
@@ -356,20 +356,61 @@
       box-shadow:0 2px 4px rgba(0,0,0,.35);pointer-events:none
     }
     .clip-close{
-      position:sticky;top:0;float:right;z-index:2;margin:-4px 0 8px 10px;
+      position:sticky;top:0;float:right;z-index:2;margin:-2px 0 6px 10px;
       border:1px solid #cbb89a;background:#fffaf0;color:#241c14;
-      border-radius:7px;padding:5px 10px;font:inherit;font-size:12px;cursor:pointer
+      border-radius:7px;padding:4px 9px;font:inherit;font-size:12px;cursor:pointer
     }
     .clip-close:hover{border-color:#8a7058}
     .clip-paper h2#clipHeading,.clip-paper h2{
-      font-family:var(--font-serif);font-weight:400;font-size:24px;
-      letter-spacing:-.02em;line-height:1.2;margin:4px 0 14px;clear:none
+      font-family:var(--font-serif);font-weight:400;font-size:20px;
+      letter-spacing:-.02em;line-height:1.2;margin:2px 0 8px;clear:none
     }
     .clip-paper .clip-kicker{
-      font-size:11px;letter-spacing:.12em;text-transform:uppercase;
-      color:#8a7058;font-weight:700;margin:0 0 4px
+      font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+      color:#8a7058;font-weight:700;margin:0 0 2px
     }
-    .clip-paper .btn{background:#fffaf0;border-color:#cbb89a;color:#241c14}
+    .clip-layout{
+      display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);
+      gap:10px 16px;align-items:stretch;
+      padding-top:2px;
+      border-top:1px solid rgba(90,70,40,.14);
+    }
+    .clip-layout-link{grid-template-columns:1fr 1fr;align-items:start}
+    .clip-col{min-width:0;display:flex;flex-direction:column}
+    .clip-col-note{border-left:1px dashed rgba(90,70,40,.22);padding-left:14px}
+    .clip-col-meta .field,.clip-col-note .field{margin:6px 0}
+    .clip-paper .field{margin:6px 0;gap:4px}
+    .clip-paper .field label{font-size:10px;letter-spacing:.07em}
+    .clip-paper .field input,.clip-paper .field textarea,.clip-paper .field select{padding:7px 8px;border-radius:6px}
+    .clip-paper .field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .clip-paper .field-row .field{margin:6px 0}
+    .clip-paper .field.check{margin:4px 0}
+    .clip-paper .hint{font-size:11px;margin:0 0 4px;line-height:1.35}
+    .clip-paper .connection-help{margin:6px 0 8px;padding:7px 9px;font-size:12px}
+    .clip-paper .empty-note{margin:0 0 8px;font-size:13px}
+    .clip-preview{
+      position:relative;margin:0 0 8px;border-radius:6px;overflow:hidden;
+      border:1px solid rgba(90,70,40,.22);background:#e8dcc4;
+      aspect-ratio:16/9;max-height:132px
+    }
+    .clip-preview img{
+      display:block;width:100%;height:100%;object-fit:cover;object-position:top center;
+      background:#ddd2b8
+    }
+    .clip-preview img.is-fallback{object-fit:contain;padding:18px;background:#efe4c8}
+    .clip-preview-empty{
+      display:grid;place-items:center;height:100%;min-height:72px;
+      color:#8a7058;font-size:12px;letter-spacing:.04em
+    }
+    .clip-paper .field-note{flex:1;display:flex;flex-direction:column;min-height:0;margin-top:6px}
+    .clip-paper .field-note textarea{
+      flex:1;min-height:160px;resize:vertical;line-height:1.45;
+      background:
+        repeating-linear-gradient(transparent,transparent 21px,rgba(40,50,70,.06) 22px),
+        #fffaf0
+    }
+    .clip-paper .actions{margin-top:auto;padding-top:8px;gap:6px}
+    .clip-paper .btn{background:#fffaf0;border-color:#cbb89a;color:#241c14;padding:7px 10px}
     .clip-paper .btn.primary{background:var(--red);border-color:var(--red);color:#fff}
     .clip-paper .btn.success{background:var(--green);border-color:var(--green);color:#fff}
     .clip-detail.is-open .clip-paper{animation:clipUnfold .42s cubic-bezier(.22,1,.36,1) both}
@@ -386,14 +427,21 @@
     @media(max-width:900px){
       .clip-paper{
         left:50%!important;top:auto!important;bottom:12px;right:auto!important;
-        width:min(520px,calc(100% - 20px));max-height:min(70vh,560px);
+        width:min(560px,calc(100% - 20px));max-height:min(72vh,560px);
         transform:translateX(-50%) rotate(0deg)
       }
+      .clip-layout,.clip-layout-link{grid-template-columns:1fr;gap:6px}
+      .clip-col-note{border-left:0;padding-left:0;border-top:1px dashed rgba(90,70,40,.22);padding-top:8px}
+      .clip-paper .field-note textarea{min-height:110px}
       .clip-detail.is-open .clip-paper{animation-name:clipUnfoldMobile}
       @keyframes clipUnfoldMobile{
         from{opacity:0;transform:translateX(-50%) translateY(24px) scale(.96)}
         to{opacity:1;transform:translateX(-50%) translateY(0)}
       }
+    }
+    @media(max-width:560px){
+      .clip-paper .field-row{grid-template-columns:1fr}
+      .clip-preview{max-height:100px}
     }
     @media(prefers-reduced-motion:reduce){
       .app,.clip-detail.is-open .clip-paper{transition:none!important;animation:none!important}

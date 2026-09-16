@@ -377,6 +377,7 @@ function animClipPaper(){
   void clipPaper.offsetWidth;
   clipPaper.classList.add('is-animating');
 }
+const CLIP_PAPER_W=720;
 function positionClipNearSelection(){
   if(!clipPaper||!clipDetail||clipDetail.hidden)return;
   clipPaper.classList.remove('anchored');
@@ -384,7 +385,7 @@ function positionClipNearSelection(){
   if(narrowScreen.matches)return;
   const el=selected?board.querySelector(`.card[data-id="${CSS.escape(selected)}"]`):null;
   const br=boardWrap.getBoundingClientRect();
-  const pad=14,pw=Math.min(440,br.width-pad*2);
+  const pad=14,pw=Math.min(CLIP_PAPER_W,br.width-pad*2);
   if(!el){
     clipPaper.style.left='50%';clipPaper.style.top='50%';clipPaper.style.width=pw+'px';
     clipPaper.style.transform='translate(-50%,-50%) rotate(-.6deg)';
@@ -431,19 +432,34 @@ function openInspector(){
   let c=state.cards.find(x=>x.id===selected);if(!c||!clipContent)return;
   const kinds=['线索','链接','来源','观察','推断','问题','下一步'];
   const heading=isLinkCard(c)?'链接剪报':'线索详情';
-  const cacheHint=c.previewCache?'已缓存本地预览。':'成功加载的截图会压缩缓存到本机，之后即使截图服务超时也会继续显示。';
+  const cacheHint=c.previewCache?'已缓存本地预览。':'截图成功后会压缩缓存到本机。';
   const worldLocked=isWorldCard(c);
+  const pick=previewPick(c);
+  const fav=faviconOf(c.url||'');
+  const previewHtml=c.url||c.preview||c.previewCache
+    ?`<div class="clip-preview">${pick.src
+      ?`<img src="${esc(pick.src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${pick.stage==='live'?' crossorigin="anonymous"':''} data-stage="${esc(pick.stage)}" data-fav="${esc(fav)}" onerror="this.classList.add('is-fallback');this.src=this.dataset.fav||'';this.onerror=null" />`
+      :`<div class="clip-preview-empty">暂无预览</div>`}</div>`
+    :'';
   clipContent.innerHTML=`<p class="clip-kicker">Caseboard · 剪报</p><h2 id="clipHeading">${heading}</h2>${linking?'<div class="connection-help">连线模式已开启：点另一张卡片即可自动建立关系。</div>':''}`+
+    `<div class="clip-layout">`+
+    `<div class="clip-col clip-col-meta">`+
+    previewHtml+
+    `<div class="field-row">`+
     `<div class="field"><label>思想尺度</label><select id="fscale">${['世界问题','研究判断','机制 / 局部问题','观察 / 证据'].map(x=>`<option ${x===c.cardScale?'selected':''}>${x}</option>`).join('')}</select></div>`+
-    `<div class="field check"><label><input type="checkbox" id="fkeepVisible" ${c.keepVisible||worldLocked?'checked':''} ${worldLocked?'disabled':''} /> 缩小时保持完整</label></div>`+
-    `<p class="hint">${worldLocked?'「世界问题」缩小时始终保持完整卡片。':'缩小到约 40% 以下时，勾选后仍显示完整卡片，不收成色点。'}</p>`+
     `<div class="field"><label>类型</label><select id="fkind">${kinds.map(x=>`<option ${x===c.kind?'selected':''}>${x}</option>`).join('')}</select></div>`+
+    `</div>`+
+    `<div class="field check"><label><input type="checkbox" id="fkeepVisible" ${c.keepVisible||worldLocked?'checked':''} ${worldLocked?'disabled':''} /> 缩小时保持完整</label></div>`+
+    `<p class="hint">${worldLocked?'「世界问题」缩小时始终保持完整。':'约 40% 以下勾选后仍显示完整卡片。'}</p>`+
     `<div class="field"><label>标题</label><input id="ftitle" value="${esc(c.title||'')}" /></div>`+
     `<div class="field"><label>网址</label><input id="furl" type="url" placeholder="https://example.com/…" value="${esc(c.url||'')}" /></div>`+
-    `<div class="field"><label>封面 / 预览图（可选）</label><input id="fpreview" type="url" placeholder="自备截图或封面图 URL，覆盖自动预览" value="${esc(c.preview||'')}" /></div>`+
-    `<p class="hint">${c.preview?'当前用自备封面图。':'填写网址后会尝试自动截图；失败则显示站点图标。'}也可粘贴自备图覆盖。${cacheHint} 缓存为压缩图，卡片很多时可能占满浏览器本地存储。</p>`+
-    `<div class="field"><label>批注</label><textarea id="fnote" placeholder="这则链接和当前推理有什么关系？">${esc(c.note||'')}</textarea></div>`+
-    `<div class="actions"><button class="btn success" id="saveCard">保存</button>${c.url?`<button class="btn" id="refreshPreview" type="button">刷新预览</button><a class="btn" id="openUrl" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">打开网页</a>`:''}<button class="btn" id="makeLink">从这里连线</button><button class="btn" id="delCard">删除</button></div>`;
+    `<div class="field"><label>封面 / 预览图（可选）</label><input id="fpreview" type="url" placeholder="自备封面图 URL，覆盖自动预览" value="${esc(c.preview||'')}" /></div>`+
+    `<p class="hint">${c.preview?'当前用自备封面。':'填网址后自动截图；失败则显示站点图标。'}${cacheHint}</p>`+
+    `</div>`+
+    `<div class="clip-col clip-col-note">`+
+    `<div class="field field-note"><label>批注</label><textarea id="fnote" placeholder="这则剪报和当前推理有什么关系？">${esc(c.note||'')}</textarea></div>`+
+    `<div class="actions"><button class="btn success" id="saveCard">保存</button>${c.url?`<button class="btn" id="refreshPreview" type="button">刷新预览</button><a class="btn" id="openUrl" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">打开网页</a>`:''}<button class="btn" id="makeLink">从这里连线</button><button class="btn" id="delCard">删除</button></div>`+
+    `</div></div>`;
   showClip();
   const syncKeepVisibleUi=()=>{
     const scaleVal=document.querySelector('#fscale')?.value;
@@ -490,10 +506,14 @@ function openLinkInspector(){
   const w=lk.width||state.lineWidth||2,col=lk.color||state.lineColor;
   clipContent.innerHTML=`<p class="clip-kicker">Caseboard · 连线</p><h2 id="clipHeading">连线详情</h2>`+
     `<p class="empty-note">${esc(from?.title||'?')} → ${esc(to?.title||'?')}</p>`+
+    `<div class="clip-layout clip-layout-link">`+
+    `<div class="clip-col">`+
     `<div class="field"><label>颜色</label><div class="swatches" id="lcolor">${swatchHtml(col,'link')}</div></div>`+
     `<div class="field"><label>标志</label><select id="lmarker">${MARKERS.map(([v,t])=>`<option value="${v}" ${(lk.marker||'none')===v?'selected':''}>${t}</option>`).join('')}</select></div>`+
+    `</div><div class="clip-col">`+
     `<div class="field"><label>粗细 (<span id="lwval">${w}</span> px)</label><input type="range" id="lwidth" min="1" max="10" value="${w}"></div>`+
-    `<div class="actions"><button class="btn" id="linkFlip">调换方向</button><button class="btn primary" id="linkDone">完成</button><button class="btn" id="linkDel">删除连线</button></div>`;
+    `<div class="actions"><button class="btn" id="linkFlip">调换方向</button><button class="btn primary" id="linkDone">完成</button><button class="btn" id="linkDel">删除连线</button></div>`+
+    `</div></div>`;
   showClip();
   bindSwatches(document.querySelector('#lcolor'),()=>lk.color||state.lineColor,c=>{lk.color=c;drawLinks();saveNow()});
   document.querySelector('#lmarker').onchange=e=>{lk.marker=e.target.value;drawLinks();saveNow()};
@@ -538,7 +558,29 @@ function setZoom(next,anchor){
   scale=Math.max(.35,Math.min(1.8,next));
   camera.x=point.x-wx*scale;camera.y=point.y-wy*scale;applyCamera();scheduleSave();
 }
+function wheelOverClip(e){
+  const over=e.target.closest?.('#clipDetail');
+  if(!over||over.hidden)return false;
+  e.preventDefault();
+  e.stopPropagation();
+  const unit=e.deltaMode===1?16:e.deltaMode===2?(clipPaper?.clientHeight||100):1;
+  const dy=e.deltaY*unit;
+  let el=e.target;
+  while(el&&el!==over){
+    if(el.scrollHeight>el.clientHeight+1){
+      const max=el.scrollHeight-el.clientHeight,next=el.scrollTop+dy;
+      if((dy<0&&el.scrollTop>0)||(dy>0&&el.scrollTop<max-.5)){
+        el.scrollTop=Math.max(0,Math.min(max,next));
+        return true;
+      }
+    }
+    el=el.parentElement;
+  }
+  if(clipPaper&&clipPaper.scrollHeight>clipPaper.clientHeight+1)clipPaper.scrollTop+=dy;
+  return true;
+}
 function wheelZoom(e){
+  if(wheelOverClip(e))return;
   e.preventDefault();
   if(drag||pan||!e.deltaY)return;
   const r=boardWrap.getBoundingClientRect();
@@ -547,6 +589,7 @@ function wheelZoom(e){
   setZoom(scale*Math.exp(-delta*.002),{x:e.clientX-r.left,y:e.clientY-r.top});
 }
 boardWrap.addEventListener('wheel',wheelZoom,{passive:false});
+if(clipDetail)clipDetail.addEventListener('wheel',wheelOverClip,{passive:false});
 const boardPicker=document.querySelector('#boardPicker');
 const boardPickerBtn=document.querySelector('#boardPickerBtn');
 const boardPickerMenu=document.querySelector('#boardPickerMenu');
