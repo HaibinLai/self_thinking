@@ -419,6 +419,7 @@
         #fffaf0
     }
     .clip-paper .actions{margin-top:auto;padding-top:8px;gap:6px}
+    .clip-paper .actions select.btn{max-width:100%;min-width:0;padding:8px 10px}
     .clip-paper .btn{background:#fffaf0;border-color:#cbb89a;color:#241c14;padding:7px 10px}
     .clip-paper .btn.primary{background:var(--red);border-color:var(--red);color:#fff}
     .clip-paper .btn.success{background:var(--green);border-color:var(--green);color:#fff}

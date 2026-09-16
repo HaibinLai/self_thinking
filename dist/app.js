@@ -431,6 +431,56 @@ function dismissClip(){
   markCards();drawLinks();
   hideClip();
 }
+const CARD_CLIP_PREFIX='caseboard-card:v1:';
+function cloneCardOnto(boardData,source,offset=36){
+  if(!boardData.cards)boardData.cards=[];
+  const copy=JSON.parse(JSON.stringify(source));
+  copy.id=crypto.randomUUID();
+  copy.x=(Number(source.x)||0)+offset;
+  copy.y=(Number(source.y)||0)+offset;
+  if(!copy.tilt)copy.tilt=(Math.random()>.5?'-1deg':'1deg');
+  boardData.cards.push(copy);
+  return copy;
+}
+function cardClipboardText(c){
+  const payload=JSON.parse(JSON.stringify(c));
+  delete payload.id;
+  return CARD_CLIP_PREFIX+JSON.stringify(payload);
+}
+function parseCardClipboard(text){
+  const t=String(text||'').trim();
+  if(!t.startsWith(CARD_CLIP_PREFIX))return null;
+  try{
+    const data=JSON.parse(t.slice(CARD_CLIP_PREFIX.length));
+    if(!data||typeof data!=='object'||Array.isArray(data))return null;
+    return data;
+  }catch{return null}
+}
+function flushCardForm(){
+  const c=state.cards.find(x=>x.id===selected);if(!c)return null;
+  if(!document.querySelector('#ftitle'))return c;
+  const prevUrl=c.url,prevPreview=c.preview;
+  c.cardScale=document.querySelector('#fscale').value;c.kind=document.querySelector('#fkind').value;
+  c.title=document.querySelector('#ftitle').value.trim()||'无标题';
+  const rawUrl=document.querySelector('#furl').value.trim();
+  c.url=tryParseUrl(rawUrl)||'';
+  if(!c.url&&rawUrl)toastMsg('请填写以 http(s) 开头的有效网址。');
+  c.preview=document.querySelector('#fpreview').value.trim();
+  c.note=document.querySelector('#fnote').value.trim();
+  const keepEl=document.querySelector('#fkeepVisible');
+  if(keepEl&&!keepEl.disabled)c.keepVisible=!!keepEl.checked;
+  if(c.url!==prevUrl||c.preview!==prevPreview)delete c.previewCache;
+  if(c.url&&c.kind!=='链接'&&!['来源','线索'].includes(c.kind))c.kind='链接';
+  if(c.url&&(!c.title||c.title==='无标题'))c.title=hostOf(c.url)||'网页链接';
+  return c;
+}
+function pasteCardPayload(data){
+  const seed={...data,id:'tmp',x:data.x??0,y:data.y??0};
+  const card=cloneCardOnto(state,seed);
+  selected=card.id;selectedLink=null;clearLinkMode();
+  render();openInspector();
+  toastMsg('已粘贴到当前板子。');
+}
 function openInspector(){
   let c=state.cards.find(x=>x.id===selected);if(!c||!clipContent)return;
   const kinds=['线索','链接','来源','观察','推断','问题','下一步'];
@@ -461,7 +511,7 @@ function openInspector(){
     `</div>`+
     `<div class="clip-col clip-col-note">`+
     `<div class="field field-note"><label>批注</label><textarea id="fnote" placeholder="这则剪报和当前推理有什么关系？">${esc(c.note||'')}</textarea></div>`+
-    `<div class="actions"><button class="btn success" id="saveCard">保存</button>${c.url?`<button class="btn" id="refreshPreview" type="button">刷新预览</button><a class="btn" id="openUrl" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">打开网页</a>`:''}<button class="btn" id="makeLink">从这里连线</button><button class="btn" id="delCard">删除</button></div>`+
+    `<div class="actions"><button class="btn success" id="saveCard">保存</button><button class="btn" id="dupCard" type="button">复制</button>${workspace.boards.length>1?`<select id="copyToBoard" class="btn" aria-label="复制到其他板子"><option value="">复制到其他板子…</option>${workspace.boards.filter(b=>b.id!==workspace.activeId).map(b=>`<option value="${esc(b.id)}">${esc(b.data.caseTitle||'未命名板子')}</option>`).join('')}</select>`:''}${c.url?`<button class="btn" id="refreshPreview" type="button">刷新预览</button><a class="btn" id="openUrl" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">打开网页</a>`:''}<button class="btn" id="makeLink">从这里连线</button><button class="btn" id="delCard">删除</button></div>`+
     `</div></div>`;
   showClip();
   const syncKeepVisibleUi=()=>{
@@ -474,20 +524,24 @@ function openInspector(){
   };
   document.querySelector('#fscale').onchange=syncKeepVisibleUi;
   document.querySelector('#saveCard').onclick=()=>{
-    const prevUrl=c.url,prevPreview=c.preview;
-    c.cardScale=document.querySelector('#fscale').value;c.kind=document.querySelector('#fkind').value;
-    c.title=document.querySelector('#ftitle').value.trim()||'无标题';
-    const rawUrl=document.querySelector('#furl').value.trim();
-    c.url=tryParseUrl(rawUrl)||'';
-    if(!c.url&&rawUrl)toastMsg('请填写以 http(s) 开头的有效网址。');
-    c.preview=document.querySelector('#fpreview').value.trim();
-    c.note=document.querySelector('#fnote').value.trim();
-    const keepEl=document.querySelector('#fkeepVisible');
-    if(keepEl&&!keepEl.disabled)c.keepVisible=!!keepEl.checked;
-    if(c.url!==prevUrl||c.preview!==prevPreview)delete c.previewCache;
-    if(c.url&&c.kind!=='链接'&&!['来源','线索'].includes(c.kind))c.kind='链接';
-    if(c.url&&(!c.title||c.title==='无标题'))c.title=hostOf(c.url)||'网页链接';
+    if(!flushCardForm())return;
     render();dismissClip();toastMsg('已保存。');
+  };
+  document.querySelector('#dupCard').onclick=()=>{
+    const src=flushCardForm();if(!src)return;
+    const copy=cloneCardOnto(state,src);
+    selected=copy.id;selectedLink=null;clearLinkMode();
+    render();openInspector();toastMsg('已在本板复制。');
+  };
+  const copyTo=document.querySelector('#copyToBoard');
+  if(copyTo)copyTo.onchange=()=>{
+    const targetId=copyTo.value;if(!targetId)return;
+    const src=flushCardForm();if(!src){copyTo.value='';return}
+    const board=workspace.boards.find(b=>b.id===targetId);
+    if(!board){copyTo.value='';return}
+    cloneCardOnto(board.data,src);
+    save();copyTo.value='';
+    toastMsg(`已复制到「${board.data.caseTitle||'未命名板子'}」。`);
   };
   const refreshBtn=document.querySelector('#refreshPreview');
   if(refreshBtn)refreshBtn.onclick=()=>{
@@ -743,9 +797,20 @@ function newBoardFromText(text=''){
 boardPickerBtn?.addEventListener('click',e=>{e.stopPropagation();setBoardPickerOpen(!isBoardPickerOpen())});
 document.querySelector('#newBoard')?.addEventListener('click',()=>{setBoardPickerOpen(false);newBoardFromText()});
 document.addEventListener('pointerdown',e=>{if(isBoardPickerOpen()&&boardPicker&&!boardPicker.contains(e.target))setBoardPickerOpen(false)});
+document.addEventListener('copy',e=>{
+  if(e.target instanceof Element&&(e.target.closest('input,textarea,select')||e.target.isContentEditable))return;
+  if(!selected||selectedLink!=null)return;
+  const c=isClipOpen()?flushCardForm():state.cards.find(x=>x.id===selected);
+  if(!c)return;
+  e.clipboardData.setData('text/plain',cardClipboardText(c));
+  e.preventDefault();
+  toastMsg('已复制卡片，可在本板或其他板粘贴。');
+});
 document.addEventListener('paste',e=>{
   if(e.defaultPrevented||e.target instanceof Element&&(e.target.closest('input,textarea,select')||e.target.isContentEditable))return;
   const text=e.clipboardData?.getData('text/plain');if(!text||!text.trim())return;
+  const cardData=parseCardClipboard(text);
+  if(cardData){e.preventDefault();pasteCardPayload(cardData);return}
   e.preventDefault();
   const url=tryParseUrl(text.trim());
   if(url){addLinkCard(url);return}
