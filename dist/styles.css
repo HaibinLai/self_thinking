@@ -42,7 +42,7 @@
     }
     .board-picker-list{display:grid;gap:4px;max-height:min(42vh,280px);overflow:auto;padding:0 2px 4px}
     .board-picker-row{
-      display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:4px;
+      display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px;
       border-radius:8px;padding:2px
     }
     .board-picker-row.is-active{background:rgba(229,181,92,.12)}
@@ -69,11 +69,10 @@
       font:inherit;font-size:14px;padding:4px 8px;outline:none
     }
     .board-picker-edit:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(229,181,92,.25)}
-    .board-picker-rename,.board-picker-del{
+    .board-picker-del{
       flex:none;border:1px solid transparent;background:transparent;color:#a89880;
       border-radius:7px;padding:6px 8px;font:inherit;font-size:12px;cursor:pointer
     }
-    .board-picker-rename:hover{color:#f3ead7;border-color:#5a4634;background:rgba(255,255,255,.06)}
     .board-picker-del:hover:not(:disabled){color:#ffb0a8;border-color:#6a3a32;background:rgba(180,50,40,.15)}
     .board-picker-del:disabled{opacity:.35;cursor:not-allowed}
     .board-picker-foot{padding:6px 2px 2px;border-top:1px solid #3a2c20;margin-top:4px}

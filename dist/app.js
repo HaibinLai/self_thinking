@@ -625,15 +625,11 @@ function updateBoardSelect(){
     item.dataset.id=b.id;
     const boardName=b.data.caseTitle||'未命名板子';
     item.innerHTML=`<span class="board-picker-index">${i+1}</span><span class="board-picker-title">${esc(boardName)}</span>${b.id===workspace.activeId?'<span class="board-picker-check" aria-hidden="true">✓</span>':''}`;
-    item.onclick=()=>{if(b.id!==workspace.activeId){saveDraft();activateBoard(b.id)}setBoardPickerOpen(false)};
-    const ren=document.createElement('button');
-    ren.type='button';
-    ren.className='board-picker-rename';
-    ren.dataset.id=b.id;
-    ren.textContent='重命名';
-    ren.title='重命名这块板子';
-    ren.setAttribute('aria-label',`重命名板子「${boardName}」`);
-    ren.onclick=e=>{e.stopPropagation();startBoardRename(b.id,row)};
+    item.title=b.id===workspace.activeId?'再点一次可重命名':'切换到这块板子';
+    item.onclick=()=>{
+      if(b.id===workspace.activeId){startBoardRename(b.id,row);return}
+      saveDraft();activateBoard(b.id);setBoardPickerOpen(false);
+    };
     const del=document.createElement('button');
     del.type='button';
     del.className='board-picker-del';
@@ -643,7 +639,7 @@ function updateBoardSelect(){
     del.setAttribute('aria-label',`删除板子「${boardName}」`);
     del.disabled=onlyOne;
     del.onclick=e=>{e.stopPropagation();deleteBoard(b.id)};
-    row.append(item,ren,del);
+    row.append(item,del);
     boardPickerList.appendChild(row);
   });
 }
@@ -659,10 +655,9 @@ function startBoardRename(id,row){
   const item=row.querySelector('.board-picker-item');
   const titleEl=row.querySelector('.board-picker-title');
   const check=row.querySelector('.board-picker-check');
-  const ren=row.querySelector('.board-picker-rename');
   const del=row.querySelector('.board-picker-del');
   if(!item||!titleEl){row.classList.remove('is-editing');return}
-  if(ren)ren.hidden=true;if(del)del.hidden=true;if(check)check.remove();
+  if(del)del.hidden=true;if(check)check.remove();
   const input=document.createElement('input');
   input.type='text';
   input.className='board-picker-edit';
