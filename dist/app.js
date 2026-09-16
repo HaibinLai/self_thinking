@@ -8,7 +8,7 @@ const workspace=CaseboardStore.load(localStorage,DEFAULT);
 workspace.settings||={};workspace.settings.font||='instrument';
 let state=workspace.boards.find(b=>b.id===workspace.activeId).data,selected=null,selectedLink=null,linking=null,drag=null,pan=null,scale=1,camera={x:0,y:0};
 if(state.boardColor==='#1b2738')state.boardColor='#6a4a32';
-state.boardColor ||= '#6a4a32'; state.lineColor ||= '#d95650'; state.lineWidth ||= 2; normalizeLinks(state);
+state.boardColor ||= '#6a4a32'; state.lineColor ||= '#d95650'; state.lineWidth ||= 2; normalizeLinks(state); ensureCardLayers(state);
 state.cards.forEach(c=>c.cardScale ||= (c.kind==='问题'?'世界问题':c.kind==='推断'?'研究判断':(c.kind==='观察'||c.kind==='来源'||c.kind==='下一步')?'观察 / 证据':'机制 / 局部问题'));
 if(state.camera){scale=state.camera.scale||1;camera.x=state.camera.x||0;camera.y=state.camera.y||0}
 const board=document.querySelector('#board'),stage=document.querySelector('#stage'),boardWrap=document.querySelector('.board-wrap'),svg=document.querySelector('#strings'),toast=document.querySelector('#toast');
@@ -143,6 +143,46 @@ function applyFont(){
   if(sel&&sel.value!==key)sel.value=FONT_PRESETS[key]?key:'instrument';
 }
 function normalizeLinks(s){if(!Array.isArray(s.links))s.links=[];s.links=s.links.map(l=>Array.isArray(l)?{from:l[0],to:l[1],marker:'arrow'}:l)}
+function cardZ(c){return Number.isFinite(c?.z)?c.z:0}
+function ensureCardLayers(data){
+  const cards=data?.cards;if(!Array.isArray(cards)||!cards.length)return;
+  let z=Math.max(0,...cards.filter(c=>Number.isFinite(c.z)).map(c=>c.z));
+  cards.forEach((c,i)=>{if(!Number.isFinite(c.z))c.z=z?++z:i+1});
+}
+function nextCardZ(data){
+  const cards=data?.cards||[];
+  return Math.max(0,...cards.map(cardZ))+1;
+}
+function applyCardLayers(){
+  board.querySelectorAll('.card').forEach(e=>{
+    const c=state.cards.find(x=>x.id===e.dataset.id);
+    if(c)e.style.zIndex=String(cardZ(c));
+  });
+}
+function bringCardToFront(c,{quiet}={}){
+  if(!c)return;
+  const max=Math.max(0,...state.cards.map(cardZ));
+  if(cardZ(c)<max||state.cards.some(x=>x!==c&&cardZ(x)===max))c.z=max+1;
+  applyCardLayers();saveNow();
+  if(!quiet)toastMsg('已置于顶层。');
+}
+function sendCardToBack(c){
+  if(!c)return;
+  const min=Math.min(...state.cards.map(cardZ));
+  c.z=min-1;applyCardLayers();saveNow();toastMsg('已置于底层。');
+}
+function bringCardForward(c){
+  if(!c)return;
+  const above=state.cards.filter(x=>x!==c&&cardZ(x)>cardZ(c)).sort((a,b)=>cardZ(a)-cardZ(b))[0];
+  if(!above){bringCardToFront(c);return}
+  const t=cardZ(c);c.z=cardZ(above);above.z=t;applyCardLayers();saveNow();toastMsg('已上移一层。');
+}
+function sendCardBackward(c){
+  if(!c)return;
+  const below=state.cards.filter(x=>x!==c&&cardZ(x)<cardZ(c)).sort((a,b)=>cardZ(b)-cardZ(a))[0];
+  if(!below){sendCardToBack(c);return}
+  const t=cardZ(c);c.z=cardZ(below);below.z=t;applyCardLayers();saveNow();toastMsg('已下移一层。');
+}
 function tryParseUrl(text){
   const s=String(text||'').trim();if(!s||/\s/.test(s))return null;
   try{const u=new URL(/^https?:\/\//i.test(s)?s:'https://'+s);if(!/^https?:$/i.test(u.protocol)||!u.hostname.includes('.'))return null;return u.href}catch{return null}
@@ -359,7 +399,7 @@ function refreshLineColorSwatches(){
   lineSwatchesBound=true;
 }
 function markCards(){document.querySelectorAll('.card').forEach(e=>{e.classList.toggle('selected',e.dataset.id===selected);e.classList.toggle('target',e.dataset.id===linking)});boardWrap.classList.toggle('linking',!!linking);document.querySelector('#linkBtn').classList.toggle('active',!!linking)}
-function render(){board.querySelectorAll('.card').forEach(e=>e.remove());document.querySelector('#empty').hidden=state.cards.length>0;state.cards.forEach(c=>{let e=document.createElement('article');const link=isLinkCard(c);const fit=fitCardStyle(c);e.className=`card fit ${link?'link':(scaleClass[c.cardScale]||'mechanism')}`;e.dataset.id=c.id;e.style.cssText=`left:${c.x}px;top:${c.y}px;--tilt:${c.tilt||'0deg'};--type:${typeColor[c.kind]||(link?'#5a9f78':'#e5b55c')};width:${fit.width}px;min-height:${fit.minHeight||0}px;height:auto`;e.innerHTML=`<button class="pin" aria-label="从这张卡片连线" title="从这里连线"></button>${cardFaceHtml(c)}`;e.addEventListener('pointerdown',startDrag);e.addEventListener('click',clickCard);let pin=e.querySelector('.pin');pin.addEventListener('pointerdown',x=>x.stopPropagation());pin.addEventListener('click',x=>{x.stopPropagation();enterLinkMode(c.id)});board.appendChild(e)});markCards();applyStyle();drawLinks();scheduleSave()}
+function render(){board.querySelectorAll('.card').forEach(e=>e.remove());document.querySelector('#empty').hidden=state.cards.length>0;ensureCardLayers(state);[...state.cards].sort((a,b)=>cardZ(a)-cardZ(b)).forEach(c=>{let e=document.createElement('article');const link=isLinkCard(c);const fit=fitCardStyle(c);e.className=`card fit ${link?'link':(scaleClass[c.cardScale]||'mechanism')}`;e.dataset.id=c.id;e.style.cssText=`left:${c.x}px;top:${c.y}px;--tilt:${c.tilt||'0deg'};--type:${typeColor[c.kind]||(link?'#5a9f78':'#e5b55c')};width:${fit.width}px;min-height:${fit.minHeight||0}px;height:auto;z-index:${cardZ(c)}`;e.innerHTML=`<button class="pin" aria-label="从这张卡片连线" title="从这里连线"></button>${cardFaceHtml(c)}`;e.addEventListener('pointerdown',startDrag);e.addEventListener('click',clickCard);let pin=e.querySelector('.pin');pin.addEventListener('pointerdown',x=>x.stopPropagation());pin.addEventListener('click',x=>{x.stopPropagation();enterLinkMode(c.id)});board.appendChild(e)});markCards();applyStyle();drawLinks();scheduleSave()}
 let linksRaf=0;
 function requestDrawLinks(){if(linksRaf)return;linksRaf=requestAnimationFrame(()=>{linksRaf=0;drawLinks()})}
 function drawLinks(){
@@ -383,7 +423,7 @@ function drawLinks(){
   svg.querySelectorAll('.link-hit').forEach(el=>el.addEventListener('click',ev=>{ev.stopPropagation();selectLink(+el.dataset.i)}));
 }
 function startDrag(e){let c=state.cards.find(x=>x.id===e.currentTarget.dataset.id),r=boardWrap.getBoundingClientRect();drag={c,dx:(e.clientX-r.left-camera.x)/scale-c.x,dy:(e.clientY-r.top-camera.y)/scale-c.y,startX:e.clientX,startY:e.clientY,moved:false,el:e.currentTarget};window.addEventListener('pointermove',moveDrag);window.addEventListener('pointerup',endDrag,{once:true})}
-function moveDrag(e){if(!drag)return;if(!drag.moved&&Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)<6)return;let r=boardWrap.getBoundingClientRect();drag.moved=true;drag.c.x=(e.clientX-r.left-camera.x)/scale-drag.dx;drag.c.y=(e.clientY-r.top-camera.y)/scale-drag.dy;drag.el.style.left=drag.c.x+'px';drag.el.style.top=drag.c.y+'px';requestDrawLinks()}
+function moveDrag(e){if(!drag)return;if(!drag.moved&&Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)<6)return;if(!drag.moved){drag.moved=true;bringCardToFront(drag.c,{quiet:true})}let r=boardWrap.getBoundingClientRect();drag.c.x=(e.clientX-r.left-camera.x)/scale-drag.dx;drag.c.y=(e.clientY-r.top-camera.y)/scale-drag.dy;drag.el.style.left=drag.c.x+'px';drag.el.style.top=drag.c.y+'px';requestDrawLinks()}
 function endDrag(){window.removeEventListener('pointermove',moveDrag);if(drag?.moved){if(linksRaf){cancelAnimationFrame(linksRaf);linksRaf=0;drawLinks()}saveNow()}if(drag)setTimeout(()=>drag=null,0)}
 function enterLinkMode(id){hideClip();linking=id||'choose-source';markCards();toastMsg(id?'现在点另一张卡片，红线会自动钉上。':'先点起点，再点终点。')}
 function clearLinkMode(){linking=null;markCards()}
@@ -453,6 +493,7 @@ function cloneCardOnto(boardData,source,offset=36){
   copy.id=crypto.randomUUID();
   copy.x=(Number(source.x)||0)+offset;
   copy.y=(Number(source.y)||0)+offset;
+  copy.z=nextCardZ(boardData);
   if(!copy.tilt)copy.tilt=(Math.random()>.5?'-1deg':'1deg');
   boardData.cards.push(copy);
   return copy;
@@ -526,6 +567,12 @@ function openInspector(){
     `</div>`+
     `<div class="clip-col clip-col-note">`+
     `<div class="field field-note"><label>批注</label><textarea id="fnote" placeholder="这则剪报和当前推理有什么关系？">${esc(c.note||'')}</textarea></div>`+
+    `<div class="field"><label>叠放层级</label><div class="layer-actions" role="group" aria-label="叠放层级">`+
+    `<button type="button" class="btn" id="layerBack" title="置于底层">置底</button>`+
+    `<button type="button" class="btn" id="layerDown" title="下移一层">下移</button>`+
+    `<button type="button" class="btn" id="layerUp" title="上移一层">上移</button>`+
+    `<button type="button" class="btn" id="layerFront" title="置于顶层">置顶</button>`+
+    `</div></div>`+
     `<div class="actions"><button class="btn success" id="saveCard">保存</button><button class="btn" id="dupCard" type="button">复制</button>${workspace.boards.length>1?`<select id="copyToBoard" class="btn" aria-label="复制到其他板子"><option value="">复制到其他板子…</option>${workspace.boards.filter(b=>b.id!==workspace.activeId).map(b=>`<option value="${esc(b.id)}">${esc(b.data.caseTitle||'未命名板子')}</option>`).join('')}</select>`:''}${c.url?`<button class="btn" id="refreshPreview" type="button">刷新预览</button><a class="btn" id="openUrl" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">打开网页</a>`:''}<button class="btn" id="makeLink">从这里连线</button><button class="btn" id="delCard">删除</button></div>`+
     `</div></div>`;
   showClip();
@@ -538,6 +585,10 @@ function openInspector(){
     if(locked)el.checked=true;
   };
   document.querySelector('#fscale').onchange=syncKeepVisibleUi;
+  document.querySelector('#layerBack').onclick=()=>sendCardToBack(c);
+  document.querySelector('#layerDown').onclick=()=>sendCardBackward(c);
+  document.querySelector('#layerUp').onclick=()=>bringCardForward(c);
+  document.querySelector('#layerFront').onclick=()=>bringCardToFront(c);
   document.querySelector('#saveCard').onclick=()=>{
     if(!flushCardForm())return;
     render();dismissClip();toastMsg('已保存。');
@@ -787,7 +838,7 @@ function saveDraft(){
 }
 function activateBoard(id){
   const entry=workspace.boards.find(b=>b.id===id);if(!entry)return;
-  workspace.activeId=id;state=entry.data;state.lineWidth||=2;normalizeLinks(state);selected=null;selectedLink=null;linking=null;drag=null;pan=null;
+  workspace.activeId=id;state=entry.data;state.lineWidth||=2;normalizeLinks(state);ensureCardLayers(state);selected=null;selectedLink=null;linking=null;drag=null;pan=null;
   window.removeEventListener('pointermove',moveDrag);window.removeEventListener('pointermove',movePan);
   boardWrap.classList.remove('panning');
   scale=state.camera?.scale||1;camera={x:state.camera?.x||0,y:state.camera?.y||0};
@@ -804,7 +855,7 @@ function newBoardFromText(text=''){
   activateBoard(id);
   if(text){
     const r=boardWrap.getBoundingClientRect();
-    const card={id:crypto.randomUUID(),cardScale:'研究判断',kind:'线索',title,note:text,x:r.width/2-114,y:r.height/2-62,tilt:'0deg'};
+    const card={id:crypto.randomUUID(),cardScale:'研究判断',kind:'线索',title,note:text,x:r.width/2-114,y:r.height/2-62,tilt:'0deg',z:nextCardZ(state)};
     state.cards.push(card);selected=card.id;render();openInspector();boardWrap.focus({preventScroll:true});
   }
   toastMsg(text?'已新建板子，全文已放入卡片。':'已新建空白板子。');
@@ -836,12 +887,12 @@ function addLinkCard(url=''){
   saveDraft();
   const r=boardWrap.getBoundingClientRect(),parsed=tryParseUrl(url)||'';
   const host=hostOf(parsed)||'网页链接';
-  const c={id:crypto.randomUUID(),cardScale:'观察 / 证据',kind:'链接',title:host,url:parsed,preview:'',note:'',x:(r.width/2-camera.x)/scale-110,y:(r.height/2-camera.y)/scale-105,tilt:(Math.random()>.5?'-1.2deg':'1.2deg')};
+  const c={id:crypto.randomUUID(),cardScale:'观察 / 证据',kind:'链接',title:host,url:parsed,preview:'',note:'',x:(r.width/2-camera.x)/scale-110,y:(r.height/2-camera.y)/scale-105,tilt:(Math.random()>.5?'-1.2deg':'1.2deg'),z:nextCardZ(state)};
   state.cards.push(c);selected=c.id;render();openInspector();
   const fu=document.querySelector('#furl');if(fu){fu.focus();fu.select()}
   toastMsg(parsed?'已钉上一张链接剪报。':'填写网址，保存后会显示预览。');
 }
-function add(){let r=boardWrap.getBoundingClientRect(),c={id:crypto.randomUUID(),cardScale:'观察 / 证据',kind:'线索',title:'新线索',note:'它让我想到什么？证据是什么？',x:(r.width/2-camera.x)/scale-71,y:(r.height/2-camera.y)/scale-38,tilt:'0deg'};state.cards.push(c);selected=c.id;render();openInspector();document.querySelector('#ftitle').focus();document.querySelector('#ftitle').select()}
+function add(){let r=boardWrap.getBoundingClientRect(),c={id:crypto.randomUUID(),cardScale:'观察 / 证据',kind:'线索',title:'新线索',note:'它让我想到什么？证据是什么？',x:(r.width/2-camera.x)/scale-71,y:(r.height/2-camera.y)/scale-38,tilt:'0deg',z:nextCardZ(state)};state.cards.push(c);selected=c.id;render();openInspector();document.querySelector('#ftitle').focus();document.querySelector('#ftitle').select()}
 function toastMsg(m){toast.textContent=m;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
 document.querySelector('#addLinkBtn').onclick=()=>addLinkCard();
 document.querySelector('#addBtn').onclick=add;document.querySelector('#linkBtn').onclick=()=>{if(linking){clearLinkMode();toastMsg('已退出连线模式。');return}enterLinkMode(selected)};document.querySelector('#zoomIn').onclick=()=>setZoom(Math.min(1.8,+(scale+.1).toFixed(2)));document.querySelector('#zoomOut').onclick=()=>setZoom(Math.max(.35,+(scale-.1).toFixed(2)));document.querySelector('#boardColor').oninput=e=>{state.boardColor=e.target.value;applyStyle();scheduleSave()};document.querySelector('#lineWidth').oninput=e=>{state.lineWidth=+e.target.value;document.querySelector('#lineWidthVal').textContent=state.lineWidth;drawLinks();scheduleSave()};document.querySelector('#fontPreset').onchange=e=>{workspace.settings.font=e.target.value;applyFont();saveNow();toastMsg('字体已更新。')};boardWrap.addEventListener('pointerdown',startPan);applyFont();refreshLineColorSwatches();render();

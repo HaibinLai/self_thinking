@@ -425,6 +425,10 @@
     .clip-paper .btn{background:#fffaf0;border-color:#cbb89a;color:#241c14;padding:7px 10px}
     .clip-paper .btn.primary{background:var(--red);border-color:var(--red);color:#fff}
     .clip-paper .btn.success{background:var(--green);border-color:var(--green);color:#fff}
+    .layer-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+    .layer-actions .btn{padding:7px 6px;font-size:12px;text-align:center}
+    .strings{z-index:10000;pointer-events:none}
+    .card{z-index:1}
     .clip-detail.is-open .clip-paper{animation:clipUnfold .42s cubic-bezier(.22,1,.36,1) both}
     .clip-detail.is-open .clip-paper.anchored{animation-name:clipUnfoldAnchored}
     @keyframes clipUnfold{
