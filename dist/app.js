@@ -124,12 +124,15 @@ document.addEventListener('keydown',e=>{
 const typeColor={线索:'#e5b55c',来源:'#77b7d5',观察:'#77b7d5',推断:'#c68bf1',问题:'#ff7168',下一步:'#ff7168',链接:'#5a9f78'};
 const scaleClass={'世界问题':'world','研究判断':'research','机制 / 局部问题':'mechanism','观察 / 证据':'evidence'};
 window.addEventListener('resize',()=>drawLinks());
-const cardDimensions={world:[300,168],research:[228,123],mechanism:[185,104],evidence:[142,76],link:[220,210]};
+const cardDimensions={world:[300,168],research:[228,123],mechanism:[185,104],evidence:[142,76],link:[220,210],linkImage:[280,320]};
 const CARD_FIT_MAX_CHARS=200,CARD_FIT_W=[128,286],CARD_FIT_MIN_H=[58,154];
 const CARD_FIT_WORLD_W=[268,320],CARD_FIT_WORLD_MIN_H=[148,180];
 function cardTextLen(c){return String(c?.title||'').length+String(c?.note||'').length}
 function fitCardStyle(c){
-  if(isLinkCard(c))return {width:220,minHeight:0};
+  if(isLinkCard(c)){
+    if(isImageUrl(c.url))return {width:280,minHeight:0};
+    return {width:220,minHeight:0};
+  }
   const t=Math.min(1,cardTextLen(c)/CARD_FIT_MAX_CHARS);
   if(isWorldCard(c)){
     return {
@@ -368,6 +371,7 @@ function cardFaceHtml(c){
   const hostLabel=host||t('card.webLink'),title=c.title||(isImageUrl(url)?imageFileName(url):host)||t('card.webLink'),note=c.note||'';
   const kindExtra=c.kind&&c.kind!=='链接'?` · ${esc(kindLabel(c.kind))}`:'';
   const kindLabelText=isImageUrl(url)?t('card.imageClip'):t('card.linkClip');
+  const bodyClass=isImageUrl(url)?'link-body link-body-image':'link-body';
   const chip=`<div class="link-chip">${fav?`<img src="${esc(fav)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"/>`:''}<span>${esc(hostLabel)}</span></div>`;
   let media;
   if(pick.src){
@@ -379,7 +383,10 @@ function cardFaceHtml(c){
   }else{
     media=`<div class="link-shot-wrap" data-state="empty"><div class="link-shot-ph"><span>${esc(t('card.previewPh'))}</span></div>${chip}</div>`;
   }
-  return `${media}<div class="link-body"><div class="kind">${kindLabelText}${kindExtra}</div><div class="title">${esc(title)}</div><div class="excerpt${note?'':' is-ph'}">${esc(note||t('card.notePh'))}</div></div>`;
+  const excerpt=isImageUrl(url)
+    ?(note?`<div class="excerpt">${esc(note)}</div>`:'')
+    :`<div class="excerpt${note?'':' is-ph'}">${esc(note||t('card.notePh'))}</div>`;
+  return `${media}<div class="${bodyClass}"><div class="kind">${kindLabelText}${kindExtra}</div><div class="title">${esc(title)}</div>${excerpt}</div>`;
 }
 function markerDefs(color,prefix='mk'){return (
   `<marker id="${prefix}-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="${color}"/></marker>`+
@@ -409,7 +416,7 @@ function saveNow(){clearTimeout(saveTimer);saveTimer=0;save()}
 const LOD_WORLD=.4,BUBBLE_SIZE=[14,14];
 function isWorldCard(c){return !!(c&&!isLinkCard(c)&&c.cardScale==='世界问题')}
 function shouldBubble(c){return scale<LOD_WORLD&&!isWorldCard(c)&&!c?.keepVisible}
-function cardSizeKey(c){return isLinkCard(c)?'link':(scaleClass[c.cardScale]||'mechanism')}
+function cardSizeKey(c){return isLinkCard(c)?(isImageUrl(c.url)?'linkImage':'link'):(scaleClass[c.cardScale]||'mechanism')}
 function fallbackCardSize(c){
   if(shouldBubble(c))return BUBBLE_SIZE;
   const fit=fitCardStyle(c);
@@ -451,7 +458,7 @@ function refreshLineColorSwatches(){
   lineSwatchesBound=true;
 }
 function markCards(){document.querySelectorAll('.card').forEach(e=>{e.classList.toggle('selected',e.dataset.id===selected);e.classList.toggle('target',e.dataset.id===linking)});boardWrap.classList.toggle('linking',!!linking);document.querySelector('#linkBtn').classList.toggle('active',!!linking)}
-function render(){board.querySelectorAll('.card').forEach(e=>e.remove());document.querySelector('#empty').hidden=state.cards.length>0;ensureCardLayers(state);[...state.cards].sort((a,b)=>cardZ(a)-cardZ(b)).forEach(c=>{let e=document.createElement('article');const link=isLinkCard(c);const world=isWorldCard(c);const fit=fitCardStyle(c);e.className=`card fit ${link?'link':(scaleClass[c.cardScale]||'mechanism')}`;e.dataset.id=c.id;e.style.cssText=`left:${c.x}px;top:${c.y}px;--tilt:${c.tilt||'0deg'};--type:${typeColor[c.kind]||(link?'#5a9f78':'#e5b55c')};width:${fit.width}px;min-height:${fit.minHeight||0}px;height:auto;z-index:${cardZ(c)}`;e.innerHTML=`<button class="pin" aria-label="${esc(t('card.pin'))}" title="${esc(t('card.pinTitle'))}"></button>${world?'<span class="world-ring" aria-hidden="true"></span>':''}${cardFaceHtml(c)}`;e.addEventListener('pointerdown',startDrag);e.addEventListener('click',clickCard);let pin=e.querySelector('.pin');pin.addEventListener('pointerdown',x=>x.stopPropagation());pin.addEventListener('click',x=>{x.stopPropagation();enterLinkMode(c.id)});board.appendChild(e)});markCards();applyStyle();drawLinks();scheduleSave()}
+function render(){board.querySelectorAll('.card').forEach(e=>e.remove());document.querySelector('#empty').hidden=state.cards.length>0;ensureCardLayers(state);[...state.cards].sort((a,b)=>cardZ(a)-cardZ(b)).forEach(c=>{let e=document.createElement('article');const link=isLinkCard(c);const world=isWorldCard(c);const imgCard=link&&isImageUrl(c.url);const fit=fitCardStyle(c);e.className=`card fit ${link?(imgCard?'link link-image':'link'):(scaleClass[c.cardScale]||'mechanism')}`;e.dataset.id=c.id;e.style.cssText=`left:${c.x}px;top:${c.y}px;--tilt:${c.tilt||'0deg'};--type:${typeColor[c.kind]||(link?'#5a9f78':'#e5b55c')};width:${fit.width}px;min-height:${fit.minHeight||0}px;height:auto;z-index:${cardZ(c)}`;e.innerHTML=`<button class="pin" aria-label="${esc(t('card.pin'))}" title="${esc(t('card.pinTitle'))}"></button>${world?'<span class="world-ring" aria-hidden="true"></span>':''}${cardFaceHtml(c)}`;e.addEventListener('pointerdown',startDrag);e.addEventListener('click',clickCard);let pin=e.querySelector('.pin');pin.addEventListener('pointerdown',x=>x.stopPropagation());pin.addEventListener('click',x=>{x.stopPropagation();enterLinkMode(c.id)});board.appendChild(e)});markCards();applyStyle();drawLinks();scheduleSave()}
 let linksRaf=0;
 function requestDrawLinks(){if(linksRaf)return;linksRaf=requestAnimationFrame(()=>{linksRaf=0;drawLinks()})}
 function drawLinks(){
