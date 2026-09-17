@@ -282,7 +282,8 @@
       isolation:isolate
     }
     .card.link.link-image .link-shot-wrap{
-      aspect-ratio:4/5;min-height:220px;
+      aspect-ratio:var(--img-aspect, 4 / 5);
+      min-height:0;
       border-bottom-color:rgba(90,70,40,.18)
     }
     .card.link .link-shot-wrap::after{
@@ -296,11 +297,24 @@
     }
     .card.link .link-shot-wrap[data-kind="image"]::after{display:none}
     .card.link .link-shot-wrap[data-kind="image"] .link-shot{
-      object-fit:cover;object-position:center;background:#1a1510
+      object-fit:contain;object-position:center;background:#1a1510
     }
     .card.link.link-image .link-shot-wrap[data-kind="image"] .link-shot{
-      object-fit:cover
+      object-fit:contain
     }
+    .card.link.link-image.is-resizing{
+      outline:2px solid rgba(90,159,120,.55);outline-offset:3px
+    }
+    .img-resize{
+      position:absolute;z-index:6;right:3px;bottom:3px;
+      width:16px;height:16px;padding:0;border:0;border-radius:3px;
+      cursor:nwse-resize;background:
+        linear-gradient(135deg,transparent 46%,rgba(40,30,20,.55) 48% 52%,transparent 54%),
+        linear-gradient(135deg,transparent 62%,rgba(40,30,20,.4) 64% 68%,transparent 70%);
+      box-shadow:inset 0 0 0 1px rgba(90,70,40,.25);
+      opacity:.7
+    }
+    .img-resize:hover,.card.link.link-image.is-resizing .img-resize{opacity:1;background-color:rgba(255,250,240,.55)}
     .card.link .link-shot.fallback{
       inset:auto;left:50%;top:40%;width:52px;height:52px;
       object-fit:contain;padding:0;border-radius:11px;
