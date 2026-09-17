@@ -1017,7 +1017,7 @@ function addLinkCard(url=''){
   const title=parsed&&isImageUrl(parsed)?imageFileName(parsed):host;
   const c={id:crypto.randomUUID(),cardScale:'观察 / 证据',kind:'链接',title,url:parsed,preview:'',note:'',x:(r.width/2-camera.x)/scale-110,y:(r.height/2-camera.y)/scale-105,tilt:(Math.random()>.5?'-1.2deg':'1.2deg'),z:nextCardZ(state)};
   state.cards.push(c);selected=c.id;render();openInspector();
-  const fu=document.querySelector('#furl');if(fu){fu.focus();fu.select()}
+  const fu=openClips.get(cardClipKey(c.id))?.body?.querySelector('.f-url');if(fu){fu.focus();fu.select()}
   toastMsg(parsed?(isImageUrl(parsed)?'已钉上图片剪报。':'已钉上一张链接剪报。'):'填写网址，保存后会显示预览。');
 }
 function add(){let r=boardWrap.getBoundingClientRect(),c={id:crypto.randomUUID(),cardScale:'观察 / 证据',kind:'线索',title:'新线索',note:'它让我想到什么？证据是什么？',x:(r.width/2-camera.x)/scale-71,y:(r.height/2-camera.y)/scale-38,tilt:'0deg',z:nextCardZ(state)};state.cards.push(c);selected=c.id;render();openInspector();const t=openClips.get(cardClipKey(c.id))?.body?.querySelector('.f-title');if(t){t.focus();t.select()}}
