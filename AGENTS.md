@@ -95,6 +95,7 @@ ID 或新卡 `tempId`。确认界面把勾选项的 `tempId` 传给 `applyDraft(
 - `markerDefs(color)` / `MARKERS`：标志定义与下拉选项来源。新增标志类型时，同时改这两处。注意 `return (` 必须用括号包住模板字符串，否则换行会触发 ASI 导致返回 `undefined`。
 - `edgePoint(cx,cy,w,h,tx,ty,pad)`：从卡片中心朝目标方向落到矩形边缘外 `pad` 像素处。
 - `openInspector()` / `openLinkInspector()`：在画布上打开报纸剪报浮层 `#clipDetail`（可多开）。每张卡片 / 连线对应一个可拖动的 `.clip-paper` 窗口；点标题栏拖动，Esc 关闭最上层，点空白只取消选中不关窗。「详情」按钮关闭全部窗口。
+- **结构化多选**：普通点击将结构化选择重置为当前卡片并照常打开详情；`Shift` 或 `Cmd/Ctrl` + 点击切换多张卡片，工具栏 `#structureCount` 显示数量。点「结构化」打开 `#structurePanel` 草案，可分别勾选建议卡片与连线后只增量应用；交互层调用 `window.CaseboardStructure.buildDraft/applyDraft`。
 - `startDrag/moveDrag/endDrag`：拖动卡片（移动 6px 才算拖动）。`startPan/movePan/endPan`：平移画布（同样 6px 阈值）；**平移不会打开/关闭详情**；空白处 pointerup 且未移动时才 `clearSelection()` / 关闭浮层。关闭按钮、Esc、「详情」切换也可收起浮层。
 - `newBoardFromText(text)`：粘贴文字或点「＋ 新建板子」时新建板子。`activateBoard(id)`：切换板子（会 `normalizeLinks` 并重置选中态）。
 - `save()` / `scheduleSave()`：把 `panels`、`camera` 写回 `state` 并持久化；失败时显示 `#storageError` 提示（含预览缓存占空间说明）。右侧详情栏已移除，`panels.right` 恒为 `false`。

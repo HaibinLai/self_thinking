@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <title data-i18n="doc.title">Caseboard — 推理工作台</title>
   <meta name="description" data-i18n-content="doc.desc" content="把线索、证据和推断放到同一张推理板上。" />
-  <link rel="stylesheet" href="styles.css?v=img-resize1">
+  <link rel="stylesheet" href="styles.css?v=structure1">
 </head>
 <body>
   <main class="app right-collapsed">
@@ -81,6 +81,8 @@
         <span class="zoom" id="zoomLabel">100%</span>
         <button class="btn" id="zoomIn" data-i18n-aria="toolbar.zoomIn" aria-label="放大">＋</button>
         <button class="btn" id="linkBtn" data-i18n="toolbar.link">连线</button>
+        <button class="btn" id="structureBtn" data-i18n="toolbar.structure">结构化</button>
+        <span class="structure-count" id="structureCount" aria-live="polite">已选 0</span>
         <button class="btn" id="addLinkBtn" data-i18n="toolbar.addLink">＋ 链接</button>
         <button class="btn success" id="addBtn" data-i18n="toolbar.add">＋ 新线索</button>
         <button class="btn" id="toggleInspector" aria-controls="clipDetail" aria-expanded="false" data-i18n="toolbar.detail">详情</button>
@@ -93,6 +95,23 @@
           </div>
         </div>
         <div class="clip-detail" id="clipDetail" hidden aria-hidden="true"></div>
+        <div class="structure-panel" id="structurePanel" hidden aria-hidden="true">
+          <div class="structure-backdrop"></div>
+          <section class="structure-paper" role="dialog" aria-modal="true" aria-labelledby="structureTitle" tabindex="-1">
+            <header class="structure-head">
+              <div>
+                <p class="structure-kicker" data-i18n="structure.kicker">Caseboard · 结构草案</p>
+                <h2 id="structureTitle" data-i18n="structure.title">结构化选中</h2>
+              </div>
+              <button type="button" class="btn structure-close" data-i18n="structure.close">关闭</button>
+            </header>
+            <div class="structure-body"></div>
+            <footer class="structure-actions">
+              <button type="button" class="btn structure-close" data-i18n="structure.close">关闭</button>
+              <button type="button" class="btn success structure-apply" data-i18n="structure.apply">应用到板</button>
+            </footer>
+          </section>
+        </div>
       </div>
     </section>
   </main>
@@ -126,7 +145,8 @@
   </div>
 
   <script src="board-store.js?v=preview-cache1"></script>
-  <script src="i18n.js?v=i18n1"></script>
-  <script src="app.js?v=img-resize1"></script>
+  <script src="i18n.js?v=structure1"></script>
+  <script src="structure.js?v=structure1"></script>
+  <script src="app.js?v=structure1"></script>
 </body>
 </html>
