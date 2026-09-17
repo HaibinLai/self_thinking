@@ -13,7 +13,9 @@ state.cards.forEach(c=>c.cardScale ||= (c.kind==='问题'?'世界问题':c.kind=
 if(state.camera){scale=state.camera.scale||1;camera.x=state.camera.x||0;camera.y=state.camera.y||0}
 const board=document.querySelector('#board'),stage=document.querySelector('#stage'),boardWrap=document.querySelector('.board-wrap'),svg=document.querySelector('#strings'),toast=document.querySelector('#toast');
 const app=document.querySelector('.app'),sidebar=document.querySelector('#sidebar');
-const clipDetail=document.querySelector('#clipDetail'),clipPaper=document.querySelector('#clipPaper'),clipContent=document.querySelector('#clipContent');
+const clipDetail=document.querySelector('#clipDetail');
+const openClips=new Map();
+let clipStackZ=20,clipWinDrag=null,activeClipKey=null;
 const narrowScreen=window.matchMedia('(max-width:900px)');
 let leftOpen=narrowScreen.matches?false:state.panels?.left!==false;
 function syncDetailToggle(){
@@ -37,14 +39,12 @@ function setPanel(which,open){
 document.querySelector('#toggleSidebar').onclick=()=>setPanel('left',!leftOpen);
 document.querySelector('#closeSidebar').onclick=()=>{setPanel('left',false);document.querySelector('#toggleSidebar').focus()};
 document.querySelector('#toggleInspector').onclick=()=>{
-  if(isClipOpen()){if(selected)saveDraft();hideClip();return}
+  if(isClipOpen()){saveAllClipDrafts();closeAllClips();return}
   if(selected)openInspector();
   else if(selectedLink!=null)openLinkInspector();
   else toastMsg('先点一张卡片或连线。');
 };
-document.querySelector('#closeClip').onclick=()=>dismissClip();
-if(clipPaper)clipPaper.addEventListener('pointerdown',e=>e.stopPropagation());
-narrowScreen.addEventListener('change',()=>{if(narrowScreen.matches)leftOpen=false;else leftOpen=state.panels?.left!==false;updatePanels();if(isClipOpen())positionClipNearSelection()});
+narrowScreen.addEventListener('change',()=>{if(narrowScreen.matches)leftOpen=false;else leftOpen=state.panels?.left!==false;updatePanels()});
 updatePanels();
 const settingsRoot=document.querySelector('#settingsRoot');
 const settingsPanel=document.querySelector('#settingsPanel');
@@ -90,11 +90,12 @@ document.addEventListener('keydown',e=>{
     e.preventDefault();setBoardPickerOpen(false);boardPickerBtn?.focus();return
   }
   if(isSettingsOpen()){e.preventDefault();closeSettings(e);return}
-  if(isClipOpen()||selected!=null||selectedLink!=null||linking){e.preventDefault();dismissClip()}
+  if(isClipOpen()){e.preventDefault();closeTopClip();return}
+  if(selected!=null||selectedLink!=null||linking){e.preventDefault();clearSelection()}
 });
 const typeColor={线索:'#e5b55c',来源:'#77b7d5',观察:'#77b7d5',推断:'#c68bf1',问题:'#ff7168',下一步:'#ff7168',链接:'#5a9f78'};
 const scaleClass={'世界问题':'world','研究判断':'research','机制 / 局部问题':'mechanism','观察 / 证据':'evidence'};
-window.addEventListener('resize',()=>{drawLinks();if(typeof isClipOpen==='function'&&isClipOpen())positionClipNearSelection()});
+window.addEventListener('resize',()=>drawLinks());
 const cardDimensions={world:[300,168],research:[228,123],mechanism:[185,104],evidence:[142,76],link:[220,210]};
 const CARD_FIT_MAX_CHARS=200,CARD_FIT_W=[128,286],CARD_FIT_MIN_H=[58,154];
 const CARD_FIT_WORLD_W=[268,320],CARD_FIT_WORLD_MIN_H=[148,180];
@@ -448,66 +449,166 @@ function drawLinks(){
 function startDrag(e){let c=state.cards.find(x=>x.id===e.currentTarget.dataset.id),r=boardWrap.getBoundingClientRect();drag={c,dx:(e.clientX-r.left-camera.x)/scale-c.x,dy:(e.clientY-r.top-camera.y)/scale-c.y,startX:e.clientX,startY:e.clientY,moved:false,el:e.currentTarget};window.addEventListener('pointermove',moveDrag);window.addEventListener('pointerup',endDrag,{once:true})}
 function moveDrag(e){if(!drag)return;if(!drag.moved&&Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)<6)return;if(!drag.moved){drag.moved=true;bringCardToFront(drag.c,{quiet:true})}let r=boardWrap.getBoundingClientRect();drag.c.x=(e.clientX-r.left-camera.x)/scale-drag.dx;drag.c.y=(e.clientY-r.top-camera.y)/scale-drag.dy;drag.el.style.left=drag.c.x+'px';drag.el.style.top=drag.c.y+'px';requestDrawLinks()}
 function endDrag(){window.removeEventListener('pointermove',moveDrag);if(drag?.moved){if(linksRaf){cancelAnimationFrame(linksRaf);linksRaf=0;drawLinks()}saveNow()}if(drag)setTimeout(()=>drag=null,0)}
-function enterLinkMode(id){hideClip();linking=id||'choose-source';markCards();toastMsg(id?'现在点另一张卡片，红线会自动钉上。':'先点起点，再点终点。')}
+function enterLinkMode(id){linking=id||'choose-source';markCards();toastMsg(id?'现在点另一张卡片，红线会自动钉上。':'先点起点，再点终点。')}
 function clearLinkMode(){linking=null;markCards()}
-function clickCard(e){if(drag?.moved)return;if(selectedLink!=null){selectedLink=null;drawLinks()}let id=e.currentTarget.dataset.id;if(linking==='choose-source'){selected=id;linking=id;markCards();hideClip();toastMsg('已选起点；再点一张卡片即可连线。');return}if(linking&&linking!==id){if(!state.links.some(x=>x.from===linking&&x.to===id))state.links.push({from:linking,to:id,marker:'none',width:state.lineWidth,color:state.lineColor});selected=id;clearLinkMode();drawLinks();save();hideClip();toastMsg('红线已钉上。');return}if(linking){hideClip();return}selected=id;markCards();openInspector()}
-function isClipOpen(){return !!(clipDetail&&!clipDetail.hidden&&clipDetail.classList.contains('is-open'))}
-function animClipPaper(){
-  if(!clipPaper||window.matchMedia('(prefers-reduced-motion:reduce)').matches)return;
-  clipPaper.classList.remove('is-animating');
-  void clipPaper.offsetWidth;
-  clipPaper.classList.add('is-animating');
-}
-const CLIP_PAPER_W=720;
-function positionClipNearSelection(){
-  if(!clipPaper||!clipDetail||clipDetail.hidden)return;
-  clipPaper.classList.remove('anchored');
-  clipPaper.style.left='';clipPaper.style.top='';clipPaper.style.right='';clipPaper.style.bottom='';clipPaper.style.width='';clipPaper.style.transform='';
-  if(narrowScreen.matches)return;
-  const el=selected?board.querySelector(`.card[data-id="${CSS.escape(selected)}"]`):null;
-  const br=boardWrap.getBoundingClientRect();
-  const pad=14,pw=Math.min(CLIP_PAPER_W,br.width-pad*2);
-  if(!el){
-    clipPaper.style.left='50%';clipPaper.style.top='50%';clipPaper.style.width=pw+'px';
-    clipPaper.style.transform='translate(-50%,-50%) rotate(-.6deg)';
-    return;
-  }
-  const cr=el.getBoundingClientRect();
-  let left=cr.right-br.left+16;
-  let top=cr.top-br.top-12;
-  if(left+pw>br.width-pad)left=cr.left-br.left-pw-16;
-  if(left<pad)left=pad;
-  clipPaper.classList.add('anchored');
-  clipPaper.style.left=left+'px';clipPaper.style.top=Math.max(pad,top)+'px';clipPaper.style.width=pw+'px';clipPaper.style.transform='none';
-  requestAnimationFrame(()=>{
-    const ph=clipPaper.offsetHeight,maxTop=Math.max(pad,br.height-pad-ph);
-    let t=parseFloat(clipPaper.style.top)||pad;
-    if(t>maxTop)clipPaper.style.top=maxTop+'px';
-  });
-}
-function showClip(){
+function clickCard(e){if(drag?.moved)return;if(selectedLink!=null){selectedLink=null;drawLinks()}let id=e.currentTarget.dataset.id;if(linking==='choose-source'){selected=id;linking=id;markCards();toastMsg('已选起点；再点一张卡片即可连线。');return}if(linking&&linking!==id){if(!state.links.some(x=>x.from===linking&&x.to===id))state.links.push({from:linking,to:id,marker:'none',width:state.lineWidth,color:state.lineColor});selected=id;clearLinkMode();drawLinks();save();toastMsg('红线已钉上。');return}if(linking){return}selected=id;markCards();openInspector()}
+function isClipOpen(){return openClips.size>0}
+function cardClipKey(id){return 'card:'+id}
+function linkClipKey(lk){return 'link:'+(lk?.from||'')+':'+(lk?.to||'')}
+function syncClipLayer(){
   if(!clipDetail)return;
-  clipDetail.hidden=false;
-  clipDetail.classList.add('is-open');
-  clipDetail.setAttribute('aria-hidden','false');
-  positionClipNearSelection();
-  animClipPaper();
+  const open=isClipOpen();
+  clipDetail.hidden=!open;
+  clipDetail.classList.toggle('is-open',open);
+  clipDetail.setAttribute('aria-hidden',String(!open));
   syncDetailToggle();
 }
-function hideClip(){
-  if(!clipDetail||clipDetail.hidden)return;
-  clipDetail.classList.remove('is-open');
-  clipDetail.hidden=true;
-  clipDetail.setAttribute('aria-hidden','true');
-  if(clipContent)clipContent.innerHTML='';
-  if(clipPaper){clipPaper.classList.remove('anchored','is-animating');clipPaper.style.left=clipPaper.style.top=clipPaper.style.width=clipPaper.style.transform=''}
-  syncDetailToggle();
+function focusClip(key){
+  const win=openClips.get(key);if(!win)return;
+  activeClipKey=key;
+  clipStackZ+=1;win.z=clipStackZ;win.paper.style.zIndex=String(clipStackZ);
+  openClips.forEach((w,k)=>w.paper.classList.toggle('is-focus',k===key));
 }
+function closeClip(key,{save=true}={}){
+  const win=openClips.get(key);if(!win)return;
+  if(save&&win.kind==='card')flushCardForm(win.body,win.targetId);
+  win.paper.remove();
+  openClips.delete(key);
+  if(activeClipKey===key)activeClipKey=null;
+  syncClipLayer();
+  scheduleSave();
+}
+function closeTopClip(){
+  if(!openClips.size)return;
+  let topKey=null,topZ=-1;
+  openClips.forEach((w,k)=>{if(w.z>=topZ){topZ=w.z;topKey=k}});
+  if(topKey)closeClip(topKey);
+}
+function closeAllClips({save=true}={}){
+  [...openClips.keys()].forEach(k=>closeClip(k,{save}));
+}
+function saveAllClipDrafts(){
+  openClips.forEach(win=>{if(win.kind==='card')flushCardForm(win.body,win.targetId)});
+  save();
+}
+function hideClip(){closeAllClips({save:false})}
 function dismissClip(){
-  if(selected)saveDraft();
+  saveAllClipDrafts();
   selected=null;selectedLink=null;linking=null;
   markCards();drawLinks();
-  hideClip();
+  closeAllClips({save:false});
+}
+const CLIP_PAPER_W=720;
+function placeClipPaper(paper,cardId){
+  const br=boardWrap.getBoundingClientRect();
+  const pad=14,pw=Math.min(CLIP_PAPER_W,br.width-pad*2);
+  const offset=Math.max(0,openClips.size-1)*28;
+  paper.style.width=pw+'px';
+  paper.style.transform='none';
+  if(narrowScreen.matches){
+    paper.style.left=pad+'px';paper.style.top=(pad+offset)+'px';
+    paper.style.right=pad+'px';paper.style.width='auto';
+    return;
+  }
+  const el=cardId?board.querySelector(`.card[data-id="${CSS.escape(cardId)}"]`):null;
+  let left,top;
+  if(el){
+    const cr=el.getBoundingClientRect();
+    left=cr.right-br.left+16;top=cr.top-br.top-12;
+    if(left+pw>br.width-pad)left=cr.left-br.left-pw-16;
+    if(left<pad)left=pad;
+    top=Math.max(pad,top)+offset;
+  }else{
+    left=Math.max(pad,(br.width-pw)/2)+offset;
+    top=Math.max(pad,br.height*.12)+offset;
+  }
+  paper.style.left=left+'px';paper.style.top=top+'px';
+  paper.classList.add('anchored');
+  requestAnimationFrame(()=>{
+    const ph=paper.offsetHeight,maxTop=Math.max(pad,br.height-pad-ph);
+    let t=parseFloat(paper.style.top)||pad;
+    if(t>maxTop)paper.style.top=maxTop+'px';
+  });
+}
+function ensureClipWindow(key,{kind,targetId,heading}){
+  let win=openClips.get(key);
+  if(win){focusClip(key);return win}
+  if(!clipDetail)return null;
+  const paper=document.createElement('article');
+  paper.className='clip-paper is-animating';
+  paper.dataset.clipKey=key;
+  paper.setAttribute('role','dialog');
+  paper.setAttribute('aria-modal','false');
+  paper.innerHTML=`<header class="clip-drag"><div class="clip-drag-meta"><p class="clip-kicker">Caseboard · 剪报</p><h2 class="clip-heading">${esc(heading||'详情')}</h2></div><button type="button" class="clip-close" aria-label="关闭详情">关闭</button></header><div class="clip-body"></div>`;
+  const body=paper.querySelector('.clip-body');
+  clipStackZ+=1;
+  win={paper,body,kind,targetId,z:clipStackZ};
+  paper.style.zIndex=String(clipStackZ);
+  openClips.set(key,win);
+  clipDetail.appendChild(paper);
+  syncClipLayer();
+  placeClipPaper(paper,kind==='card'?targetId:null);
+  focusClip(key);
+  paper.querySelector('.clip-close').onclick=e=>{e.stopPropagation();closeClip(key)};
+  paper.addEventListener('pointerdown',e=>{
+    e.stopPropagation();
+    focusClip(key);
+    const handle=e.target.closest('.clip-drag');
+    if(!handle||e.target.closest('.clip-close,input,textarea,select,button,a'))return;
+    const r=paper.getBoundingClientRect(),br=boardWrap.getBoundingClientRect();
+    clipWinDrag={key,dx:e.clientX-r.left,dy:e.clientY-r.top,ox:br.left,oy:br.top,moved:false};
+    paper.classList.add('is-dragging');
+    window.addEventListener('pointermove',moveClipWin);
+    window.addEventListener('pointerup',endClipWin,{once:true});
+  });
+  return win;
+}
+function moveClipWin(e){
+  if(!clipWinDrag)return;
+  const win=openClips.get(clipWinDrag.key);if(!win)return;
+  clipWinDrag.moved=true;
+  const br=boardWrap.getBoundingClientRect();
+  let left=e.clientX-clipWinDrag.ox-clipWinDrag.dx;
+  let top=e.clientY-clipWinDrag.oy-clipWinDrag.dy;
+  const pad=8,pw=win.paper.offsetWidth,ph=win.paper.offsetHeight;
+  left=Math.max(pad,Math.min(br.width-pw-pad,left));
+  top=Math.max(pad,Math.min(br.height-ph-pad,top));
+  win.paper.style.left=left+'px';
+  win.paper.style.top=top+'px';
+  win.paper.style.right='';
+  win.paper.style.transform='none';
+  win.paper.classList.add('anchored');
+}
+function endClipWin(){
+  window.removeEventListener('pointermove',moveClipWin);
+  if(clipWinDrag){
+    const win=openClips.get(clipWinDrag.key);
+    win?.paper.classList.remove('is-dragging');
+  }
+  setTimeout(()=>clipWinDrag=null,0);
+}
+function q(root,sel){return root?root.querySelector(sel):null}
+function flushCardForm(root,cardId){
+  const id=cardId||root?.closest?.('.clip-paper')?.dataset?.cardId||selected;
+  const c=state.cards.find(x=>x.id===id);if(!c)return null;
+  const scope=root||openClips.get(cardClipKey(id))?.body;
+  if(!scope||!q(scope,'.f-title'))return c;
+  const prevUrl=c.url,prevPreview=c.preview;
+  c.cardScale=q(scope,'.f-scale')?.value||c.cardScale;
+  c.kind=q(scope,'.f-kind')?.value||c.kind;
+  c.title=(q(scope,'.f-title')?.value||'').trim()||'无标题';
+  const rawUrl=(q(scope,'.f-url')?.value||'').trim();
+  c.url=tryParseUrl(rawUrl)||'';
+  if(!c.url&&rawUrl)toastMsg('请填写以 http(s) 开头的有效网址。');
+  c.preview=(q(scope,'.f-preview')?.value||'').trim();
+  c.note=(q(scope,'.f-note')?.value||'').trim();
+  const keepEl=q(scope,'.f-keep');
+  if(keepEl&&!keepEl.disabled)c.keepVisible=!!keepEl.checked;
+  if(c.url!==prevUrl||c.preview!==prevPreview)delete c.previewCache;
+  if(c.url&&c.kind!=='链接'&&!['来源','线索'].includes(c.kind))c.kind='链接';
+  if(c.url&&(!c.title||c.title==='无标题'))c.title=isImageUrl(c.url)?imageFileName(c.url):(hostOf(c.url)||'网页链接');
+  else if(c.url&&c.url!==prevUrl&&c.title===hostOf(prevUrl||''))c.title=isImageUrl(c.url)?imageFileName(c.url):(hostOf(c.url)||'网页链接');
+  return c;
 }
 const CARD_CLIP_PREFIX='caseboard-card:v1:';
 function cloneCardOnto(boardData,source,offset=36){
@@ -535,25 +636,6 @@ function parseCardClipboard(text){
     return data;
   }catch{return null}
 }
-function flushCardForm(){
-  const c=state.cards.find(x=>x.id===selected);if(!c)return null;
-  if(!document.querySelector('#ftitle'))return c;
-  const prevUrl=c.url,prevPreview=c.preview;
-  c.cardScale=document.querySelector('#fscale').value;c.kind=document.querySelector('#fkind').value;
-  c.title=document.querySelector('#ftitle').value.trim()||'无标题';
-  const rawUrl=document.querySelector('#furl').value.trim();
-  c.url=tryParseUrl(rawUrl)||'';
-  if(!c.url&&rawUrl)toastMsg('请填写以 http(s) 开头的有效网址。');
-  c.preview=document.querySelector('#fpreview').value.trim();
-  c.note=document.querySelector('#fnote').value.trim();
-  const keepEl=document.querySelector('#fkeepVisible');
-  if(keepEl&&!keepEl.disabled)c.keepVisible=!!keepEl.checked;
-  if(c.url!==prevUrl||c.preview!==prevPreview)delete c.previewCache;
-  if(c.url&&c.kind!=='链接'&&!['来源','线索'].includes(c.kind))c.kind='链接';
-  if(c.url&&(!c.title||c.title==='无标题'))c.title=isImageUrl(c.url)?imageFileName(c.url):(hostOf(c.url)||'网页链接');
-  else if(c.url&&c.url!==prevUrl&&c.title===hostOf(prevUrl||''))c.title=isImageUrl(c.url)?imageFileName(c.url):(hostOf(c.url)||'网页链接');
-  return c;
-}
 function pasteCardPayload(data){
   const seed={...data,id:'tmp',x:data.x??0,y:data.y??0};
   const card=cloneCardOnto(state,seed);
@@ -562,119 +644,148 @@ function pasteCardPayload(data){
   toastMsg('已粘贴到当前板子。');
 }
 function openInspector(){
-  let c=state.cards.find(x=>x.id===selected);if(!c||!clipContent)return;
+  const c=state.cards.find(x=>x.id===selected);if(!c||!clipDetail)return;
+  const key=cardClipKey(c.id);
   const kinds=['线索','链接','来源','观察','推断','问题','下一步'];
   const heading=isLinkCard(c)?(isImageUrl(c.url)?'图片剪报':'链接剪报'):'线索详情';
   const cacheHint=c.previewCache?'已缓存本地预览。':(isImageUrl(c.url)?'图片链接会直接显示原图。':'截图成功后会压缩缓存到本机。');
   const worldLocked=isWorldCard(c);
   const pick=previewPick(c);
   const fav=faviconOf(c.url||'');
+  const win=ensureClipWindow(key,{kind:'card',targetId:c.id,heading});
+  if(!win)return;
+  win.paper.dataset.cardId=c.id;
+  win.targetId=c.id;
+  const headingEl=win.paper.querySelector('.clip-heading');
+  if(headingEl)headingEl.textContent=heading;
   const previewHtml=c.url||c.preview||c.previewCache
     ?`<div class="clip-preview${pick.stage==='image'||isImageUrl(c.url)?' is-image':''}">${pick.src
       ?`<img src="${esc(pick.src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${pick.stage==='live'?' crossorigin="anonymous"':''} data-stage="${esc(pick.stage)}" data-fav="${esc(fav)}" onerror="this.classList.add('is-fallback');this.src=this.dataset.fav||'';this.onerror=null" />`
       :`<div class="clip-preview-empty">暂无预览</div>`}</div>`
     :'';
-  clipContent.innerHTML=`<p class="clip-kicker">Caseboard · 剪报</p><h2 id="clipHeading">${heading}</h2>${linking?'<div class="connection-help">连线模式已开启：点另一张卡片即可自动建立关系。</div>':''}`+
+  const root=win.body;
+  root.innerHTML=`${linking?'<div class="connection-help">连线模式已开启：点另一张卡片即可自动建立关系。</div>':''}`+
     `<div class="clip-layout">`+
     `<div class="clip-col clip-col-meta">`+
     previewHtml+
     `<div class="field-row">`+
-    `<div class="field"><label>思想尺度</label><select id="fscale">${['世界问题','研究判断','机制 / 局部问题','观察 / 证据'].map(x=>`<option ${x===c.cardScale?'selected':''}>${x}</option>`).join('')}</select></div>`+
-    `<div class="field"><label>类型</label><select id="fkind">${kinds.map(x=>`<option ${x===c.kind?'selected':''}>${x}</option>`).join('')}</select></div>`+
+    `<div class="field"><label>思想尺度</label><select class="f-scale">${['世界问题','研究判断','机制 / 局部问题','观察 / 证据'].map(x=>`<option ${x===c.cardScale?'selected':''}>${x}</option>`).join('')}</select></div>`+
+    `<div class="field"><label>类型</label><select class="f-kind">${kinds.map(x=>`<option ${x===c.kind?'selected':''}>${x}</option>`).join('')}</select></div>`+
     `</div>`+
-    `<div class="field check"><label><input type="checkbox" id="fkeepVisible" ${c.keepVisible||worldLocked?'checked':''} ${worldLocked?'disabled':''} /> 缩小时保持完整</label></div>`+
+    `<div class="field check"><label><input type="checkbox" class="f-keep" ${c.keepVisible||worldLocked?'checked':''} ${worldLocked?'disabled':''} /> 缩小时保持完整</label></div>`+
     `<p class="hint">${worldLocked?'「世界问题」缩小时始终保持完整。':'约 40% 以下勾选后仍显示完整卡片。'}</p>`+
-    `<div class="field"><label>标题</label><input id="ftitle" value="${esc(c.title||'')}" /></div>`+
-    `<div class="field"><label>网址</label><input id="furl" type="url" placeholder="https://example.com/…" value="${esc(c.url||'')}" /></div>`+
-    `<div class="field"><label>封面 / 预览图（可选）</label><input id="fpreview" type="url" placeholder="自备封面图 URL，覆盖自动预览" value="${esc(c.preview||'')}" /></div>`+
+    `<div class="field"><label>标题</label><input class="f-title" value="${esc(c.title||'')}" /></div>`+
+    `<div class="field"><label>网址</label><input class="f-url" type="url" placeholder="https://example.com/…" value="${esc(c.url||'')}" /></div>`+
+    `<div class="field"><label>封面 / 预览图（可选）</label><input class="f-preview" type="url" placeholder="自备封面图 URL，覆盖自动预览" value="${esc(c.preview||'')}" /></div>`+
     `<p class="hint">${c.preview?'当前用自备封面。':(isImageUrl(c.url)?'检测到图片链接，将直接显示原图。':'填网址后自动截图；失败则显示站点图标。')}${cacheHint}</p>`+
     `</div>`+
     `<div class="clip-col clip-col-note">`+
-    `<div class="field field-note"><label>批注</label><textarea id="fnote" placeholder="这则剪报和当前推理有什么关系？">${esc(c.note||'')}</textarea></div>`+
+    `<div class="field field-note"><label>批注</label><textarea class="f-note" placeholder="这则剪报和当前推理有什么关系？">${esc(c.note||'')}</textarea></div>`+
     `<div class="field"><label>叠放层级</label><div class="layer-actions" role="group" aria-label="叠放层级">`+
-    `<button type="button" class="btn" id="layerBack" title="置于底层">置底</button>`+
-    `<button type="button" class="btn" id="layerDown" title="下移一层">下移</button>`+
-    `<button type="button" class="btn" id="layerUp" title="上移一层">上移</button>`+
-    `<button type="button" class="btn" id="layerFront" title="置于顶层">置顶</button>`+
+    `<button type="button" class="btn layer-back" title="置于底层">置底</button>`+
+    `<button type="button" class="btn layer-down" title="下移一层">下移</button>`+
+    `<button type="button" class="btn layer-up" title="上移一层">上移</button>`+
+    `<button type="button" class="btn layer-front" title="置于顶层">置顶</button>`+
     `</div></div>`+
-    `<div class="actions"><button class="btn success" id="saveCard">保存</button><button class="btn" id="dupCard" type="button">复制</button>${workspace.boards.length>1?`<select id="copyToBoard" class="btn" aria-label="复制到其他板子"><option value="">复制到其他板子…</option>${workspace.boards.filter(b=>b.id!==workspace.activeId).map(b=>`<option value="${esc(b.id)}">${esc(b.data.caseTitle||'未命名板子')}</option>`).join('')}</select>`:''}${c.url?`<button class="btn" id="refreshPreview" type="button">刷新预览</button><a class="btn" id="openUrl" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">打开网页</a>`:''}<button class="btn" id="makeLink">从这里连线</button><button class="btn" id="delCard">删除</button></div>`+
+    `<div class="actions"><button class="btn success save-card">保存</button><button class="btn dup-card" type="button">复制</button>${workspace.boards.length>1?`<select class="btn copy-to-board" aria-label="复制到其他板子"><option value="">复制到其他板子…</option>${workspace.boards.filter(b=>b.id!==workspace.activeId).map(b=>`<option value="${esc(b.id)}">${esc(b.data.caseTitle||'未命名板子')}</option>`).join('')}</select>`:''}${c.url?`<button class="btn refresh-preview" type="button">刷新预览</button><a class="btn open-url" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">打开网页</a>`:''}<button class="btn make-link">从这里连线</button><button class="btn del-card">删除</button></div>`+
     `</div></div>`;
-  showClip();
   const syncKeepVisibleUi=()=>{
-    const scaleVal=document.querySelector('#fscale')?.value;
+    const scaleVal=q(root,'.f-scale')?.value;
     const locked=!isLinkCard(c)&&scaleVal==='世界问题';
-    const el=document.querySelector('#fkeepVisible');
+    const el=q(root,'.f-keep');
     if(!el)return;
     el.disabled=locked;
     if(locked)el.checked=true;
   };
-  document.querySelector('#fscale').onchange=syncKeepVisibleUi;
-  document.querySelector('#layerBack').onclick=()=>sendCardToBack(c);
-  document.querySelector('#layerDown').onclick=()=>sendCardBackward(c);
-  document.querySelector('#layerUp').onclick=()=>bringCardForward(c);
-  document.querySelector('#layerFront').onclick=()=>bringCardToFront(c);
-  document.querySelector('#saveCard').onclick=()=>{
-    if(!flushCardForm())return;
-    render();dismissClip();toastMsg('已保存。');
+  q(root,'.f-scale').onchange=syncKeepVisibleUi;
+  q(root,'.layer-back').onclick=()=>sendCardToBack(c);
+  q(root,'.layer-down').onclick=()=>sendCardBackward(c);
+  q(root,'.layer-up').onclick=()=>bringCardForward(c);
+  q(root,'.layer-front').onclick=()=>bringCardToFront(c);
+  q(root,'.save-card').onclick=()=>{
+    if(!flushCardForm(root,c.id))return;
+    render();closeClip(key,{save:false});toastMsg('已保存。');
   };
-  document.querySelector('#dupCard').onclick=()=>{
-    const src=flushCardForm();if(!src)return;
+  q(root,'.dup-card').onclick=()=>{
+    const src=flushCardForm(root,c.id);if(!src)return;
     const copy=cloneCardOnto(state,src);
     selected=copy.id;selectedLink=null;clearLinkMode();
     render();openInspector();toastMsg('已在本板复制。');
   };
-  const copyTo=document.querySelector('#copyToBoard');
+  const copyTo=q(root,'.copy-to-board');
   if(copyTo)copyTo.onchange=()=>{
     const targetId=copyTo.value;if(!targetId)return;
-    const src=flushCardForm();if(!src){copyTo.value='';return}
-    const board=workspace.boards.find(b=>b.id===targetId);
-    if(!board){copyTo.value='';return}
-    cloneCardOnto(board.data,src);
+    const src=flushCardForm(root,c.id);if(!src){copyTo.value='';return}
+    const boardEntry=workspace.boards.find(b=>b.id===targetId);
+    if(!boardEntry){copyTo.value='';return}
+    cloneCardOnto(boardEntry.data,src);
     save();copyTo.value='';
-    toastMsg(`已复制到「${board.data.caseTitle||'未命名板子'}」。`);
+    toastMsg(`已复制到「${boardEntry.data.caseTitle||'未命名板子'}」。`);
   };
-  const refreshBtn=document.querySelector('#refreshPreview');
+  const refreshBtn=q(root,'.refresh-preview');
   if(refreshBtn)refreshBtn.onclick=()=>{
     delete c.previewCache;
-    const rawUrl=document.querySelector('#furl')?.value.trim();
+    const rawUrl=q(root,'.f-url')?.value.trim();
     const parsed=tryParseUrl(rawUrl||c.url||'');
     if(parsed)c.url=parsed;
-    c.preview=(document.querySelector('#fpreview')?.value.trim())||'';
+    c.preview=(q(root,'.f-preview')?.value.trim())||'';
     render();openInspector();toastMsg('正在重新抓取预览…');
   };
-  document.querySelector('#makeLink').onclick=()=>enterLinkMode(c.id);
-  document.querySelector('#delCard').onclick=()=>{state.cards=state.cards.filter(x=>x.id!==c.id);state.links=state.links.filter(x=>x.from!==c.id&&x.to!==c.id);selected=null;selectedLink=null;clearLinkMode();hideClip();render()};
+  q(root,'.make-link').onclick=()=>enterLinkMode(c.id);
+  q(root,'.del-card').onclick=()=>{
+    state.cards=state.cards.filter(x=>x.id!==c.id);
+    state.links=state.links.filter(x=>x.from!==c.id&&x.to!==c.id);
+    if(selected===c.id)selected=null;
+    selectedLink=null;clearLinkMode();
+    closeClip(key,{save:false});render();
+  };
 }
 function selectLink(i){if(i<0||i>=state.links.length)return;selectedLink=i;selected=null;markCards();drawLinks();openLinkInspector()}
-function clearLinkSelection(){selectedLink=null;drawLinks();if(!selected)hideClip()}
+function clearLinkSelection(){selectedLink=null;drawLinks()}
 function openLinkInspector(){
-  const lk=state.links[selectedLink];if(!lk||!clipContent)return;
+  const lk=state.links[selectedLink];if(!lk||!clipDetail)return;
+  const key=linkClipKey(lk);
   const from=state.cards.find(c=>c.id===lk.from),to=state.cards.find(c=>c.id===lk.to);
   const w=lk.width||state.lineWidth||2,col=lk.color||state.lineColor;
-  clipContent.innerHTML=`<p class="clip-kicker">Caseboard · 连线</p><h2 id="clipHeading">连线详情</h2>`+
-    `<p class="empty-note">${esc(from?.title||'?')} → ${esc(to?.title||'?')}</p>`+
+  const win=ensureClipWindow(key,{kind:'link',targetId:selectedLink,heading:'连线详情'});
+  if(!win)return;
+  win.targetId=selectedLink;
+  const headingEl=win.paper.querySelector('.clip-heading');
+  if(headingEl)headingEl.textContent='连线详情';
+  const kicker=win.paper.querySelector('.clip-kicker');
+  if(kicker)kicker.textContent='Caseboard · 连线';
+  const root=win.body;
+  root.innerHTML=`<p class="empty-note">${esc(from?.title||'?')} → ${esc(to?.title||'?')}</p>`+
     `<div class="clip-layout clip-layout-link">`+
     `<div class="clip-col">`+
-    `<div class="field"><label>颜色</label><div class="swatches" id="lcolor">${swatchHtml(col,'link')}</div></div>`+
-    `<div class="field"><label>标志</label><select id="lmarker">${MARKERS.map(([v,t])=>`<option value="${v}" ${(lk.marker||'none')===v?'selected':''}>${t}</option>`).join('')}</select></div>`+
+    `<div class="field"><label>颜色</label><div class="swatches l-color">${swatchHtml(col,'link')}</div></div>`+
+    `<div class="field"><label>标志</label><select class="l-marker">${MARKERS.map(([v,t])=>`<option value="${v}" ${(lk.marker||'none')===v?'selected':''}>${t}</option>`).join('')}</select></div>`+
     `</div><div class="clip-col">`+
-    `<div class="field"><label>粗细 (<span id="lwval">${w}</span> px)</label><input type="range" id="lwidth" min="1" max="10" value="${w}"></div>`+
-    `<div class="actions"><button class="btn" id="linkFlip">调换方向</button><button class="btn primary" id="linkDone">完成</button><button class="btn" id="linkDel">删除连线</button></div>`+
+    `<div class="field"><label>粗细 (<span class="l-wval">${w}</span> px)</label><input type="range" class="l-width" min="1" max="10" value="${w}"></div>`+
+    `<div class="actions"><button class="btn link-flip">调换方向</button><button class="btn primary link-done">完成</button><button class="btn link-del">删除连线</button></div>`+
     `</div></div>`;
-  showClip();
-  bindSwatches(document.querySelector('#lcolor'),()=>lk.color||state.lineColor,c=>{lk.color=c;drawLinks();saveNow()});
-  document.querySelector('#lmarker').onchange=e=>{lk.marker=e.target.value;drawLinks();saveNow()};
-  const lw=document.querySelector('#lwidth');lw.oninput=e=>{lk.width=+e.target.value;document.querySelector('#lwval').textContent=lk.width;drawLinks();saveNow()};
-  document.querySelector('#linkFlip').onclick=()=>{[lk.from,lk.to]=[lk.to,lk.from];drawLinks();saveNow();openLinkInspector()};
-  document.querySelector('#linkDone').onclick=()=>{clearLinkSelection();hideClip()};
-  document.querySelector('#linkDel').onclick=()=>{state.links.splice(selectedLink,1);selectedLink=null;drawLinks();saveNow();hideClip();toastMsg('连线已删除。')};
+  bindSwatches(q(root,'.l-color'),()=>lk.color||state.lineColor,c=>{lk.color=c;drawLinks();saveNow()});
+  q(root,'.l-marker').onchange=e=>{lk.marker=e.target.value;drawLinks();saveNow()};
+  const lw=q(root,'.l-width');lw.oninput=e=>{lk.width=+e.target.value;q(root,'.l-wval').textContent=lk.width;drawLinks();saveNow()};
+  q(root,'.link-flip').onclick=()=>{
+    closeClip(key,{save:false});
+    [lk.from,lk.to]=[lk.to,lk.from];
+    drawLinks();saveNow();
+    openLinkInspector();
+  };
+  q(root,'.link-done').onclick=()=>{clearLinkSelection();closeClip(key,{save:false})};
+  q(root,'.link-del').onclick=()=>{
+    const idx=state.links.indexOf(lk);
+    if(idx>=0)state.links.splice(idx,1);
+    if(selectedLink===idx)selectedLink=null;
+    drawLinks();saveNow();closeClip(key,{save:false});toastMsg('连线已删除。');
+  };
 }
 function clearSelection(){
-  const had=selected!=null||selectedLink!=null||linking||isClipOpen();
-  if(selected)saveDraft();
+  const had=selected!=null||selectedLink!=null||linking;
+  saveAllClipDrafts();
   selected=null;selectedLink=null;linking=null;
   markCards();drawLinks();
-  hideClip();
   return had;
 }
 function startPan(e){
@@ -706,14 +817,14 @@ function setZoom(next,anchor){
   camera.x=point.x-wx*scale;camera.y=point.y-wy*scale;applyCamera();scheduleSave();
 }
 function wheelOverClip(e){
-  const over=e.target.closest?.('#clipDetail');
-  if(!over||over.hidden)return false;
+  const paper=e.target.closest?.('.clip-paper');
+  if(!paper||!clipDetail||clipDetail.hidden)return false;
   e.preventDefault();
   e.stopPropagation();
-  const unit=e.deltaMode===1?16:e.deltaMode===2?(clipPaper?.clientHeight||100):1;
+  const unit=e.deltaMode===1?16:e.deltaMode===2?(paper.clientHeight||100):1;
   const dy=e.deltaY*unit;
   let el=e.target;
-  while(el&&el!==over){
+  while(el&&el!==clipDetail){
     if(el.scrollHeight>el.clientHeight+1){
       const max=el.scrollHeight-el.clientHeight,next=el.scrollTop+dy;
       if((dy<0&&el.scrollTop>0)||(dy>0&&el.scrollTop<max-.5)){
@@ -723,7 +834,7 @@ function wheelOverClip(e){
     }
     el=el.parentElement;
   }
-  if(clipPaper&&clipPaper.scrollHeight>clipPaper.clientHeight+1)clipPaper.scrollTop+=dy;
+  if(paper.scrollHeight>paper.clientHeight+1)paper.scrollTop+=dy;
   return true;
 }
 function wheelZoom(e){
@@ -849,25 +960,16 @@ function deleteBoard(id){
   }
   toastMsg(`已删除「${name}」。`);
 }
-function saveDraft(){
-  const c=state.cards.find(c=>c.id===selected),title=document.querySelector('#ftitle');
-  if(c&&title){
-    c.title=title.value.trim()||'无标题';c.note=document.querySelector('#fnote').value;c.kind=document.querySelector('#fkind').value;c.cardScale=document.querySelector('#fscale').value;
-    const fu=document.querySelector('#furl'),fp=document.querySelector('#fpreview'),fk=document.querySelector('#fkeepVisible');
-    if(fu){const raw=fu.value.trim();c.url=tryParseUrl(raw)||raw}
-    if(fp)c.preview=fp.value.trim();
-    if(fk&&!fk.disabled)c.keepVisible=!!fk.checked;
-  }
-  save();
-}
+function saveDraft(){saveAllClipDrafts()}
 function activateBoard(id){
   const entry=workspace.boards.find(b=>b.id===id);if(!entry)return;
+  saveAllClipDrafts();
+  closeAllClips({save:false});
   workspace.activeId=id;state=entry.data;state.lineWidth||=2;normalizeLinks(state);ensureCardLayers(state);selected=null;selectedLink=null;linking=null;drag=null;pan=null;
   window.removeEventListener('pointermove',moveDrag);window.removeEventListener('pointermove',movePan);
   boardWrap.classList.remove('panning');
   scale=state.camera?.scale||1;camera={x:state.camera?.x||0,y:state.camera?.y||0};
   leftOpen=narrowScreen.matches?false:state.panels?.left!==false;updatePanels();
-  hideClip();
   render();updateBoardSelect();boardWrap.focus({preventScroll:true});
 }
 function newBoardFromText(text=''){
@@ -890,7 +992,8 @@ document.addEventListener('pointerdown',e=>{if(isBoardPickerOpen()&&boardPicker&
 document.addEventListener('copy',e=>{
   if(e.target instanceof Element&&(e.target.closest('input,textarea,select')||e.target.isContentEditable))return;
   if(!selected||selectedLink!=null)return;
-  const c=isClipOpen()?flushCardForm():state.cards.find(x=>x.id===selected);
+  const win=selected?openClips.get(cardClipKey(selected)):null;
+  const c=win?flushCardForm(win.body,selected):state.cards.find(x=>x.id===selected);
   if(!c)return;
   e.clipboardData.setData('text/plain',cardClipboardText(c));
   e.preventDefault();
@@ -917,7 +1020,7 @@ function addLinkCard(url=''){
   const fu=document.querySelector('#furl');if(fu){fu.focus();fu.select()}
   toastMsg(parsed?(isImageUrl(parsed)?'已钉上图片剪报。':'已钉上一张链接剪报。'):'填写网址，保存后会显示预览。');
 }
-function add(){let r=boardWrap.getBoundingClientRect(),c={id:crypto.randomUUID(),cardScale:'观察 / 证据',kind:'线索',title:'新线索',note:'它让我想到什么？证据是什么？',x:(r.width/2-camera.x)/scale-71,y:(r.height/2-camera.y)/scale-38,tilt:'0deg',z:nextCardZ(state)};state.cards.push(c);selected=c.id;render();openInspector();document.querySelector('#ftitle').focus();document.querySelector('#ftitle').select()}
+function add(){let r=boardWrap.getBoundingClientRect(),c={id:crypto.randomUUID(),cardScale:'观察 / 证据',kind:'线索',title:'新线索',note:'它让我想到什么？证据是什么？',x:(r.width/2-camera.x)/scale-71,y:(r.height/2-camera.y)/scale-38,tilt:'0deg',z:nextCardZ(state)};state.cards.push(c);selected=c.id;render();openInspector();const t=openClips.get(cardClipKey(c.id))?.body?.querySelector('.f-title');if(t){t.focus();t.select()}}
 function toastMsg(m){toast.textContent=m;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
 document.querySelector('#addLinkBtn').onclick=()=>addLinkCard();
 document.querySelector('#addBtn').onclick=add;document.querySelector('#linkBtn').onclick=()=>{if(linking){clearLinkMode();toastMsg('已退出连线模式。');return}enterLinkMode(selected)};document.querySelector('#zoomIn').onclick=()=>setZoom(Math.min(1.8,+(scale+.1).toFixed(2)));document.querySelector('#zoomOut').onclick=()=>setZoom(Math.max(.35,+(scale-.1).toFixed(2)));document.querySelector('#boardColor').oninput=e=>{state.boardColor=e.target.value;applyStyle();scheduleSave()};document.querySelector('#lineWidth').oninput=e=>{state.lineWidth=+e.target.value;document.querySelector('#lineWidthVal').textContent=state.lineWidth;drawLinks();scheduleSave()};document.querySelector('#fontPreset').onchange=e=>{workspace.settings.font=e.target.value;applyFont();saveNow();toastMsg('字体已更新。')};boardWrap.addEventListener('pointerdown',startPan);applyFont();refreshLineColorSwatches();render();

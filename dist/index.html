@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <title>Caseboard — 推理工作台</title>
   <meta name="description" content="把线索、证据和推断放到同一张推理板上。" />
-  <link rel="stylesheet" href="styles.css?v=img-link1">
+  <link rel="stylesheet" href="styles.css?v=clip-multi1">
 </head>
 <body>
   <main class="app right-collapsed">
@@ -92,12 +92,7 @@
             <div class="empty" id="empty" hidden>在画布上粘贴网址钉上链接剪报<br>或粘贴文字新建板子。</div>
           </div>
         </div>
-        <div class="clip-detail" id="clipDetail" hidden aria-hidden="true">
-          <article class="clip-paper" id="clipPaper" role="dialog" aria-modal="false" aria-labelledby="clipHeading">
-            <button type="button" class="clip-close" id="closeClip" aria-label="关闭详情">关闭</button>
-            <div id="clipContent"></div>
-          </article>
-        </div>
+        <div class="clip-detail" id="clipDetail" hidden aria-hidden="true"></div>
       </div>
     </section>
   </main>
@@ -125,6 +120,6 @@
   </div>
 
   <script src="board-store.js?v=preview-cache1"></script>
-  <script src="app.js?v=img-link1"></script>
+  <script src="app.js?v=clip-multi1"></script>
 </body>
 </html>

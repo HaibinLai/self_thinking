@@ -388,8 +388,8 @@
     .clip-paper{
       pointer-events:auto;position:absolute;left:50%;top:50%;
       width:min(720px,calc(100% - 28px));max-height:min(68vh,520px);
-      overflow:auto;overscroll-behavior:contain;padding:14px 16px 12px;color:#241c14;
-      transform:translate(-50%,-50%) rotate(-.6deg);
+      overflow:auto;overscroll-behavior:contain;padding:0 0 12px;color:#241c14;
+      transform:none;
       background:
         linear-gradient(180deg,rgba(255,255,255,.4),transparent 22%),
         repeating-linear-gradient(0deg,transparent,transparent 21px,rgba(40,50,70,.05) 22px),
@@ -402,6 +402,23 @@
       filter:drop-shadow(0 1px 0 rgba(255,255,255,.2));
       cursor:default
     }
+    .clip-paper.is-focus{
+      box-shadow:
+        1px 2px 0 rgba(0,0,0,.06),
+        8px 18px 32px rgba(0,0,0,.42),
+        0 0 0 2px rgba(229,83,75,.35),
+        0 0 0 1px rgba(255,255,255,.2) inset
+    }
+    .clip-paper.is-dragging{opacity:.97;cursor:grabbing}
+    .clip-drag{
+      position:sticky;top:0;z-index:3;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+      padding:12px 16px 8px;cursor:grab;user-select:none;
+      background:linear-gradient(180deg,#f8f1df 70%,rgba(248,241,223,0));
+      border-bottom:1px solid rgba(90,70,40,.1)
+    }
+    .clip-drag:active,.clip-paper.is-dragging .clip-drag{cursor:grabbing}
+    .clip-drag-meta{min-width:0;flex:1}
+    .clip-body{padding:0 16px 4px}
     .clip-paper::before{
       content:"";position:absolute;left:50%;top:-10px;transform:translateX(-50%);
       width:18px;height:18px;border-radius:50%;
@@ -409,14 +426,14 @@
       box-shadow:0 2px 4px rgba(0,0,0,.35);pointer-events:none
     }
     .clip-close{
-      position:sticky;top:0;float:right;z-index:2;margin:-2px 0 6px 10px;
+      flex:none;z-index:2;margin:0;
       border:1px solid #cbb89a;background:#fffaf0;color:#241c14;
       border-radius:7px;padding:4px 9px;font:inherit;font-size:12px;cursor:pointer
     }
     .clip-close:hover{border-color:#8a7058}
-    .clip-paper h2#clipHeading,.clip-paper h2{
+    .clip-paper h2.clip-heading,.clip-paper h2{
       font-family:var(--font-serif);font-weight:400;font-size:20px;
-      letter-spacing:-.02em;line-height:1.2;margin:2px 0 8px;clear:none
+      letter-spacing:-.02em;line-height:1.2;margin:2px 0 0;clear:none
     }
     .clip-paper .clip-kicker{
       font-size:10px;letter-spacing:.12em;text-transform:uppercase;
@@ -472,31 +489,19 @@
     .layer-actions .btn{padding:7px 6px;font-size:12px;text-align:center}
     .strings{z-index:10000;pointer-events:none}
     .card{z-index:1}
-    .clip-detail.is-open .clip-paper{animation:clipUnfold .42s cubic-bezier(.22,1,.36,1) both}
-    .clip-detail.is-open .clip-paper.anchored{animation-name:clipUnfoldAnchored}
-    @keyframes clipUnfold{
-      from{opacity:0;transform:translate(-50%,-46%) rotate(-3deg) scale(.92);filter:blur(1px)}
-      to{opacity:1;transform:translate(-50%,-50%) rotate(-.6deg) scale(1);filter:none}
-    }
+    .clip-detail.is-open .clip-paper{animation:clipUnfoldAnchored .42s cubic-bezier(.22,1,.36,1) both}
     .clip-paper.anchored{animation-name:clipUnfoldAnchored}
     @keyframes clipUnfoldAnchored{
-      from{opacity:0;transform:translateY(10px) rotate(-2.5deg) scale(.94)}
+      from{opacity:0;transform:translateY(10px) scale(.94)}
       to{opacity:1;transform:none}
     }
     @media(max-width:900px){
       .clip-paper{
-        left:50%!important;top:auto!important;bottom:12px;right:auto!important;
         width:min(560px,calc(100% - 20px));max-height:min(72vh,560px);
-        transform:translateX(-50%) rotate(0deg)
       }
       .clip-layout,.clip-layout-link{grid-template-columns:1fr;gap:6px}
       .clip-col-note{border-left:0;padding-left:0;border-top:1px dashed rgba(90,70,40,.22);padding-top:8px}
       .clip-paper .field-note textarea{min-height:110px}
-      .clip-detail.is-open .clip-paper{animation-name:clipUnfoldMobile}
-      @keyframes clipUnfoldMobile{
-        from{opacity:0;transform:translateX(-50%) translateY(24px) scale(.96)}
-        to{opacity:1;transform:translateX(-50%) translateY(0)}
-      }
     }
     @media(max-width:560px){
       .clip-paper .field-row{grid-template-columns:1fr}
