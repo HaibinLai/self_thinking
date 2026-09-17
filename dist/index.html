@@ -8,48 +8,48 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <title>Caseboard — 推理工作台</title>
-  <meta name="description" content="把线索、证据和推断放到同一张推理板上。" />
-  <link rel="stylesheet" href="styles.css?v=clip-multi1">
+  <title data-i18n="doc.title">Caseboard — 推理工作台</title>
+  <meta name="description" data-i18n-content="doc.desc" content="把线索、证据和推断放到同一张推理板上。" />
+  <link rel="stylesheet" href="styles.css?v=i18n1">
 </head>
 <body>
   <main class="app right-collapsed">
     <aside class="side" id="sidebar">
-      <button class="btn panel-close" id="closeSidebar" aria-label="收起案件侧栏">收起 ‹</button>
+      <button class="btn panel-close" id="closeSidebar" data-i18n="sidebar.close" data-i18n-aria="sidebar.closeAria" aria-label="收起案件侧栏">收起 ‹</button>
       <div class="brand-row">
         <div class="brand"><span class="brand-mark">⌕</span> Caseboard</div>
-        <button type="button" class="btn gear-btn" id="openSettings" aria-haspopup="dialog" aria-controls="settingsPanel" aria-expanded="false" title="系统设置" aria-label="打开系统设置">
+        <button type="button" class="btn gear-btn" id="openSettings" aria-haspopup="dialog" aria-controls="settingsPanel" aria-expanded="false" data-i18n-title="settings.open" data-i18n-aria="settings.openAria" title="系统设置" aria-label="打开系统设置">
           <svg class="gear-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.2 7.2 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.55-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.49.49 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.86 14.52a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.3.59.22l2.39-.96c.5.39 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.55 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
         </button>
       </div>
       <div class="case-name">
-        <small>当前案件</small>
+        <small data-i18n="case.current">当前案件</small>
         <strong id="caseTitle">关于“AI 与人的位置”</strong>
       </div>
       <section class="case-style">
-        <p class="section-title">板面外观</p>
-        <label class="style-row">板面颜色 <input type="color" id="boardColor" value="#6a4a32"></label>
-        <label class="style-row">默认连线色</label>
-        <div class="swatches" id="lineColorSwatches" role="group" aria-label="连线默认颜色"></div>
-        <label class="style-row range-row">默认粗细
+        <p class="section-title" data-i18n="case.style">板面外观</p>
+        <label class="style-row"><span data-i18n="case.boardColor">板面颜色</span> <input type="color" id="boardColor" value="#6a4a32"></label>
+        <label class="style-row" data-i18n="case.lineColor">默认连线色</label>
+        <div class="swatches" id="lineColorSwatches" role="group" data-i18n-aria="case.lineColorAria" aria-label="连线默认颜色"></div>
+        <label class="style-row range-row"><span data-i18n="case.lineWidth">默认粗细</span>
           <span class="range-wrap">
             <input type="range" id="lineWidth" min="1" max="10" value="2">
             <output id="lineWidthVal">2</output>
           </span>
         </label>
-        <p class="style-hint">作用于本板默认值；单条连线仍可在详情里单独改。</p>
+        <p class="style-hint" data-i18n="case.styleHint">作用于本板默认值；单条连线仍可在详情里单独改。</p>
       </section>
       <section>
-        <p class="section-title">线索类型</p>
+        <p class="section-title" data-i18n="case.kinds">线索类型</p>
         <div class="legend">
-          <div><i class="dot lead"></i>线索</div>
-          <div><i class="dot source"></i>来源</div>
-          <div><i class="dot idea"></i>推断</div>
-          <div><i class="dot question"></i>待问问题</div>
-          <div><i class="dot" style="background:#5a9f78"></i>链接</div>
+          <div><i class="dot lead"></i><span data-i18n="legend.lead">线索</span></div>
+          <div><i class="dot source"></i><span data-i18n="legend.source">来源</span></div>
+          <div><i class="dot idea"></i><span data-i18n="legend.idea">推断</span></div>
+          <div><i class="dot question"></i><span data-i18n="legend.question">待问问题</span></div>
+          <div><i class="dot" style="background:#5a9f78"></i><span data-i18n="legend.link">链接</span></div>
         </div>
       </section>
-      <div class="side-foot">
+      <div class="side-foot" data-i18n-html="case.foot">
         画布上粘贴网址可加入链接剪报；粘贴其他文字可新建板子。<br>
         所有板子保存在这台设备上。<br>
         你不是在收集答案，而是在留下推理的轨迹。
@@ -58,38 +58,38 @@
 
     <section class="workspace">
       <header class="toolbar">
-        <button class="btn" id="toggleSidebar" aria-controls="sidebar" aria-expanded="true">案件</button>
-        <button type="button" class="btn gear-btn toolbar-gear" id="openSettingsToolbar" aria-haspopup="dialog" aria-controls="settingsPanel" aria-expanded="false" title="系统设置" aria-label="打开系统设置">
+        <button class="btn" id="toggleSidebar" aria-controls="sidebar" aria-expanded="true" data-i18n="toolbar.case">案件</button>
+        <button type="button" class="btn gear-btn toolbar-gear" id="openSettingsToolbar" aria-haspopup="dialog" aria-controls="settingsPanel" aria-expanded="false" data-i18n-title="settings.open" data-i18n-aria="settings.openAria" title="系统设置" aria-label="打开系统设置">
           <svg class="gear-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.2 7.2 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.55-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.49.49 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.86 14.52a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.3.59.22l2.39-.96c.5.39 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.55 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
         </button>
-        <h1>推理板 <span id="count"></span></h1>
+        <h1><span data-i18n="toolbar.board">推理板</span> <span id="count"></span></h1>
         <div class="board-picker" id="boardPicker">
           <button type="button" class="btn board-picker-trigger" id="boardPickerBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="boardPickerMenu">
-            <span class="board-picker-meta">板子</span>
-            <span class="board-picker-label" id="boardPickerLabel">当前板子</span>
+            <span class="board-picker-meta" data-i18n="toolbar.boards">板子</span>
+            <span class="board-picker-label" id="boardPickerLabel" data-i18n="toolbar.boardCurrent">当前板子</span>
             <span class="board-picker-caret" aria-hidden="true">▾</span>
           </button>
           <div class="board-picker-menu" id="boardPickerMenu" hidden role="listbox" aria-labelledby="boardPickerBtn">
-            <div class="board-picker-head">选择板子 · 再点当前可改名</div>
+            <div class="board-picker-head" data-i18n="toolbar.pickerHead">选择板子 · 再点当前可改名</div>
             <div class="board-picker-list" id="boardPickerList"></div>
             <div class="board-picker-foot">
-              <button type="button" class="btn board-picker-new" id="newBoard">＋ 新建板子</button>
+              <button type="button" class="btn board-picker-new" id="newBoard" data-i18n="toolbar.newBoard">＋ 新建板子</button>
             </div>
           </div>
         </div>
-        <button class="btn" id="zoomOut" aria-label="缩小">－</button>
+        <button class="btn" id="zoomOut" data-i18n-aria="toolbar.zoomOut" aria-label="缩小">－</button>
         <span class="zoom" id="zoomLabel">100%</span>
-        <button class="btn" id="zoomIn" aria-label="放大">＋</button>
-        <button class="btn" id="linkBtn">连线</button>
-        <button class="btn" id="addLinkBtn">＋ 链接</button>
-        <button class="btn primary" id="addBtn">＋ 新线索</button>
-        <button class="btn" id="toggleInspector" aria-controls="clipDetail" aria-expanded="false">详情</button>
+        <button class="btn" id="zoomIn" data-i18n-aria="toolbar.zoomIn" aria-label="放大">＋</button>
+        <button class="btn" id="linkBtn" data-i18n="toolbar.link">连线</button>
+        <button class="btn" id="addLinkBtn" data-i18n="toolbar.addLink">＋ 链接</button>
+        <button class="btn primary" id="addBtn" data-i18n="toolbar.add">＋ 新线索</button>
+        <button class="btn" id="toggleInspector" aria-controls="clipDetail" aria-expanded="false" data-i18n="toolbar.detail">详情</button>
       </header>
-      <div class="board-wrap" tabindex="0" aria-label="推理画布，粘贴文字可新建板子">
+      <div class="board-wrap" tabindex="0" data-i18n-aria="canvas.aria" aria-label="推理画布，粘贴文字可新建板子">
         <div class="stage" id="stage">
           <div class="board" id="board">
             <svg class="strings" id="strings"></svg>
-            <div class="empty" id="empty" hidden>在画布上粘贴网址钉上链接剪报<br>或粘贴文字新建板子。</div>
+            <div class="empty" id="empty" hidden data-i18n-html="empty.board">在画布上粘贴网址钉上链接剪报<br>或粘贴文字新建板子。</div>
           </div>
         </div>
         <div class="clip-detail" id="clipDetail" hidden aria-hidden="true"></div>
@@ -104,22 +104,29 @@
     <div class="settings-backdrop" id="settingsBackdrop"></div>
     <div class="settings-panel" id="settingsPanel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" tabindex="-1">
       <header class="settings-head">
-        <h2 id="settingsTitle">系统设置</h2>
-        <button type="button" class="btn" id="closeSettings" aria-label="关闭设置">关闭</button>
+        <h2 id="settingsTitle" data-i18n="settings.title">系统设置</h2>
+        <button type="button" class="btn" id="closeSettings" data-i18n="settings.close" data-i18n-aria="settings.closeAria" aria-label="关闭设置">关闭</button>
       </header>
-      <p class="settings-note">应用级设置，对所有板子生效。板面颜色、默认连线色与粗细请在左侧「案件」侧栏调节。</p>
-      <label class="style-row">字体
-        <select id="fontPreset" aria-label="界面字体">
-          <option value="instrument">精致 · Instrument</option>
-          <option value="classic">经典 · 系统</option>
-          <option value="news">报纸 · 衬线</option>
-          <option value="rounded">圆润 · 圆角</option>
+      <p class="settings-note" data-i18n="settings.note">应用级设置，对所有板子生效。板面颜色、默认连线色与粗细请在左侧「案件」侧栏调节。</p>
+      <label class="style-row"><span data-i18n="settings.lang">语言</span>
+        <select id="langPreset" data-i18n-aria="settings.langAria" aria-label="界面语言">
+          <option value="zh" data-i18n="settings.lang.zh">中文</option>
+          <option value="en" data-i18n="settings.lang.en">English</option>
+        </select>
+      </label>
+      <label class="style-row"><span data-i18n="settings.font">字体</span>
+        <select id="fontPreset" data-i18n-aria="settings.fontAria" aria-label="界面字体">
+          <option value="instrument" data-i18n="font.instrument">精致 · Instrument</option>
+          <option value="classic" data-i18n="font.classic">经典 · 系统</option>
+          <option value="news" data-i18n="font.news">报纸 · 衬线</option>
+          <option value="rounded" data-i18n="font.rounded">圆润 · 圆角</option>
         </select>
       </label>
     </div>
   </div>
 
   <script src="board-store.js?v=preview-cache1"></script>
-  <script src="app.js?v=clip-multi1"></script>
+  <script src="i18n.js?v=i18n1"></script>
+  <script src="app.js?v=i18n1"></script>
 </body>
 </html>
