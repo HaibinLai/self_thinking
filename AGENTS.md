@@ -13,6 +13,8 @@ dist/
   index.html      # 页面结构（链入样式与脚本）
   styles.css      # 全部样式：布局、软木板主题、卡片、详情动画
   app.js          # 全部交互逻辑：画布、卡片、连线、设置、链接剪报
+  structure.js    # 「结构化选中」草案生成与勾选应用引擎
+  structure-test.js # structure.js 的零依赖 Node 自测
   board-store.js  # 多板子存储与旧数据迁移（同时被浏览器和测试引用）
   favicon.svg     # 站点图标
 tests/
@@ -39,6 +41,13 @@ node --test tests/board-store.test.cjs
 ```
 
 改动 `board-store.js` 的存储 / 迁移逻辑后，务必跑一次 `node --test`。改动 UI 后，建议在浏览器里手动验证：拖动卡片、平移、滚轮缩放、粘贴建板、粘贴网址建链接剪报、连线（默认无标志）、连线详情面板（改标志 / 粗细 / 删除 / 调换方向）。
+
+「结构化选中」引擎位于 `dist/structure.js`，浏览器全局为 `window.CaseboardStructure`，也可用
+`node --test dist/structure-test.js` 验证。`buildDraft({cards, links, instruction?})` 只生成草案，不改板；
+草案包含 `summary: string[]`、`proposedCards: [{tempId, cardScale, kind, title, note, selected?}]`、
+`proposedLinks: [{tempId?, from, to, reason?, selected?}]` 与可选 `gaps: string[]`。连线端点可引用真实卡片
+ID 或新卡 `tempId`。确认界面把勾选项的 `tempId` 传给 `applyDraft(state, draft, selectedIds)`；该函数只新增
+勾选的卡片和连线（新卡缺省为「世界问题」，新线 `marker:'none'`），绝不删除原数据。
 
 ## 关键数据模型
 
