@@ -5,6 +5,10 @@ const DEFAULT={caseTitle:'关于“AI 与人的位置”',cards:[
  {id:'d',kind:'问题',title:'我想成为怎样的人？',note:'不是与模型比赛写代码，而是能让模型在重要问题上变成放大器。',x:266,y:413,tilt:'1.5deg'},
  {id:'e',kind:'下一步',title:'找一个真实的反常现象',note:'从一个让我不服气的系统行为开始观察。',x:654,y:506,tilt:'-1deg'}],links:[['a','b'],['b','c'],['c','d'],['d','e']]};
 const workspace=CaseboardStore.load(localStorage,DEFAULT);
+const requestedBoard=new URL(location.href).searchParams.get('board');
+if(requestedBoard&&workspace.boards.some(board=>board.id===requestedBoard))workspace.activeId=requestedBoard;
+function boardUrl(id){const url=new URL(location.href);url.searchParams.set('board',id);return url}
+function syncBoardUrl(){if(new URL(location.href).searchParams.has('board'))history.replaceState(null,'',boardUrl(workspace.activeId))}
 workspace.settings||={};workspace.settings.font||='instrument';
 workspace.settings.lang=CaseboardI18n.normalize(workspace.settings.lang||'zh');
 function lang(){return CaseboardI18n.normalize(workspace.settings.lang)}
@@ -1095,6 +1099,7 @@ const boardPickerLabel=document.querySelector('#boardPickerLabel');
 function isBoardPickerOpen(){return !!(boardPickerMenu&&!boardPickerMenu.hidden)}
 function setBoardPickerOpen(open){
   if(!boardPickerMenu||!boardPickerBtn)return;
+  if(open)boardPickerMenu.style.setProperty('--board-menu-top',`${Math.ceil(boardPickerBtn.getBoundingClientRect().bottom+6)}px`);
   boardPickerMenu.hidden=!open;
   boardPickerBtn.setAttribute('aria-expanded',String(open));
   if(open)boardPickerList?.querySelector('.board-picker-item.is-current')?.focus();
@@ -1206,6 +1211,7 @@ function activateBoard(id){
   closeAllClips({save:false});
   closeStructurePanel();
   workspace.activeId=id;state=entry.data;state.lineWidth||=2;normalizeLinks(state);ensureCardLayers(state);selected=null;selectedSet.clear();selectedLink=null;linking=null;drag=null;pan=null;
+  syncBoardUrl();
   window.removeEventListener('pointermove',moveDrag);window.removeEventListener('pointermove',movePan);
   boardWrap.classList.remove('panning');
   scale=state.camera?.scale||1;camera={x:state.camera?.x||0,y:state.camera?.y||0};
@@ -1228,6 +1234,14 @@ function newBoardFromText(text=''){
 }
 boardPickerBtn?.addEventListener('click',e=>{e.stopPropagation();setBoardPickerOpen(!isBoardPickerOpen())});
 document.querySelector('#newBoard')?.addEventListener('click',()=>{setBoardPickerOpen(false);newBoardFromText()});
+document.querySelector('#copyBoardLink')?.addEventListener('click',async()=>{
+  try{
+    save();
+    if(CaseboardStore.load(localStorage,DEFAULT).activeId!==workspace.activeId)throw new Error('Board was not saved');
+    await navigator.clipboard.writeText(boardUrl(workspace.activeId).href);
+    setBoardPickerOpen(false);toastMsg(t('toast.boardLinkCopied'));
+  }catch{toastMsg(t('toast.boardLinkCopyFailed'))}
+});
 document.addEventListener('pointerdown',e=>{if(isBoardPickerOpen()&&boardPicker&&!boardPicker.contains(e.target))setBoardPickerOpen(false)});
 document.addEventListener('copy',e=>{
   if(e.target instanceof Element&&(e.target.closest('input,textarea,select')||e.target.isContentEditable))return;
