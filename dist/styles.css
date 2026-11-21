@@ -621,4 +621,9 @@
     @media(prefers-reduced-motion:reduce){
       .structure-paper{animation:none!important}
     }
+
+    .glhf-entry{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #455b5c;border-radius:6px;color:#bde4d6;background:#203235;font-size:13px;font-weight:700;text-decoration:none}
+    .glhf-entry:hover,.glhf-entry:focus-visible{border-color:#72bda3;color:#fff}
+    .glhf-toolbar-link{display:inline-block;color:#bde4d6;font-size:13px;font-weight:700;text-decoration:none}
+    .glhf-toolbar-link:hover,.glhf-toolbar-link:focus-visible{color:#fff}
   

@@ -6,6 +6,8 @@
 
 GitHub 合并版：<https://haibinlai.github.io/self_thinking/>。
 
+GLHF 小目录：<https://haibinlai.github.io/self_thinking/glhf/>。收录 Caseboard、博客里的交互工具和几篇旧文章；Caseboard 仍保留在原地址，已有板子链接与浏览器本地数据不受影响。
+
 原 Sites 站点：<https://caseboard-haibin.gb38290171.chatgpt.site/>。两者独立部署，浏览器本地数据不会自动在两个站点间同步。
 
 GitHub Pages 通过 `.github/workflows/pages.yml` 发布 `dist/`。推送到 `main` 的页面或发布配置改动会自动更新网站，也可在仓库 Actions 页面手动运行部署。
@@ -59,6 +61,7 @@ python3 -m http.server 8000 --bind 127.0.0.1 --directory dist
 ```text
 dist/
   index.html   # 页面结构
+  glhf/        # GLHF 目录页及独立样式
   styles.css   # 样式（布局、软木板主题、卡片、动画）
   app.js       # 交互逻辑（画布、卡片、连线、设置、链接剪报）
   board-store.js # 多板子存储及旧数据迁移
